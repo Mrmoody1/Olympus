@@ -1,0 +1,743 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="theme-color" content="#1f1e1c">
+<title>Olympus</title>
+<link rel="manifest" href="/manifest.webmanifest">
+<link rel="icon" href="/icon-192.png">
+<link rel="apple-touch-icon" href="/icon-192.png">
+<meta name="mobile-web-app-capable" content="yes">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;500;700&display=swap" rel="stylesheet">
+<style>
+:root{
+  --bg:#1f1e1c; --panel:#2a2826; --raised:#262522; --line:#3a3836; --line-soft:#33312e; --hover:#36332f;
+  --text:#e8e4dc; --soft:#b8b2a8; --muted:#9a958c; --accent:#e0805f; --accent-ink:#1f1e1c; --cover:#3a2a24;
+  --ok:#7fb98a; --warn:#e0a85f; --bad:#e06a5f;
+  --font:'JetBrains Mono', ui-monospace, SFMono-Regular, Menlo, monospace;
+}
+*{box-sizing:border-box}
+html,body{margin:0;background:var(--bg);color:var(--text);font-family:var(--font);font-size:13px}
+a{color:inherit;text-decoration:none}
+button{font:inherit;color:inherit;background:none;border:none;cursor:pointer;padding:0}
+button:focus-visible,a:focus-visible,input:focus-visible{outline:2px solid var(--accent);outline-offset:2px;border-radius:6px}
+img{display:block}
+.hidden{display:none !important}
+.sr{position:absolute;width:1px;height:1px;overflow:hidden;clip:rect(0 0 0 0);white-space:nowrap}
+
+.wrap{max-width:1280px;margin:0 auto;padding:max(20px,env(safe-area-inset-top)) clamp(16px,4vw,40px) 56px;display:flex;flex-direction:column;gap:28px}
+header{display:flex;flex-wrap:wrap;align-items:flex-end;justify-content:space-between;gap:12px}
+.brand{display:flex;align-items:center;gap:10px;font-size:22px;font-weight:700;color:var(--accent);letter-spacing:.02em}
+.hello{margin:6px 0 0;font-size:clamp(26px,4vw,38px);line-height:1.1}
+.clock{text-align:right;color:var(--muted)}
+.clock b{display:block;font-size:clamp(26px,4vw,38px);color:var(--text);font-weight:500;font-variant-numeric:tabular-nums}
+.ibtn{width:44px;height:44px;display:grid;place-items:center;color:var(--soft);border-radius:50%}
+.ibtn:hover{color:#fff}
+
+/* search */
+.searchbox{position:relative}
+.search{display:flex;align-items:center;gap:10px;height:52px;padding:0 16px;border:1px solid var(--line);border-radius:14px;background:var(--raised);color:var(--muted)}
+.search:focus-within{border-color:var(--accent)}
+.search input{flex:1;min-width:0;background:transparent;border:none;outline:none;color:var(--text);font:inherit;font-size:14px}
+.results{position:absolute;left:0;right:0;top:58px;z-index:20;max-height:min(70vh,560px);overflow-y:auto;padding:10px;background:#2f2d2a;border:1px solid var(--line);border-radius:14px;box-shadow:0 18px 40px rgba(0,0,0,.5)}
+.results .lbl{padding:10px 10px 6px;font-size:10px;letter-spacing:.12em;text-transform:uppercase;color:var(--muted)}
+.res{display:flex;align-items:center;gap:12px;padding:8px 10px;border-radius:10px}
+.res:hover,.res:focus-visible{background:var(--hover)}
+.res .th{width:40px;height:40px;border-radius:6px;overflow:hidden;background:var(--cover);flex:none}
+.res .th.tall{height:56px}
+.res .th img{width:100%;height:100%;object-fit:cover}
+.res .tx{min-width:0;display:flex;flex-direction:column;gap:3px}
+.res .tx b{font-weight:500;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.res .tx span{color:var(--muted);font-size:12px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.res .app{margin-left:auto;font-size:10px;color:var(--muted);border:1px solid var(--line);border-radius:999px;padding:2px 8px;flex:none}
+
+/* app tiles */
+.apps{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:16px}
+/* extras: a slim rail on the left (desktop), a row of pills under the tiles (phone) */
+#app{padding-left:88px}
+.extras{position:fixed;z-index:5;left:0;top:0;bottom:0;width:88px;padding:max(24px,env(safe-area-inset-top)) 0 24px;border-right:1px solid var(--line-soft);background:var(--raised);display:flex;flex-direction:column;align-items:center;gap:6px}
+.extras h3{font-size:10px;font-weight:500;letter-spacing:.12em;text-transform:uppercase;color:var(--muted);margin:2px 0 8px}
+.ex{position:relative;width:72px;display:flex;flex-direction:column;align-items:center;gap:6px;padding:8px 4px;border-radius:14px;color:var(--soft);font-size:11px;text-align:center}
+.ex:hover{background:var(--hover);color:var(--text)}
+.ex .ic{width:44px;height:44px;border-radius:12px;background:#3a2a24;color:var(--accent);display:inline-flex !important;align-items:center;justify-content:center;border:1px solid transparent;transition:border-color .15s}
+.ex:hover .ic{border-color:var(--accent)}
+.ex .dot{position:absolute;top:8px;right:12px;width:9px;height:9px;border:2px solid var(--raised);box-sizing:content-box}
+.ex .tip{position:absolute;left:78px;top:50%;transform:translateY(-50%);white-space:nowrap;padding:8px 12px;border-radius:10px;background:var(--panel);border:1px solid var(--line);color:var(--text);font-size:12px;opacity:0;pointer-events:none;transition:opacity .12s}
+.ex .tip small{display:block;color:var(--muted);font-size:11px;margin-top:2px}
+.ex:hover .tip,.ex:focus-visible .tip{opacity:1}
+button.ex{font:inherit;background:none;border:0;cursor:pointer}
+.exg{position:relative}
+.ex[aria-expanded="true"] .ic{border-color:var(--accent)}
+.flyout{position:absolute;z-index:20;left:80px;top:0;width:250px;padding:10px;border-radius:14px;background:var(--panel);border:1px solid var(--line);box-shadow:0 12px 32px rgba(0,0,0,.4)}
+.flyout h4{margin:4px 8px 8px;font-size:11px;font-weight:500;letter-spacing:.12em;text-transform:uppercase;color:var(--muted)}
+.fo{display:flex;align-items:center;gap:12px;padding:10px;border-radius:10px;color:var(--text)}
+.fo:hover{background:var(--hover)}
+.fo .ic{width:36px;height:36px;border-radius:10px;background:#3a2a24;color:var(--accent);display:inline-flex !important;align-items:center;justify-content:center;flex:none}
+.fo .tx{flex:1;min-width:0;display:flex;flex-direction:column}
+.fo .tx small{color:var(--muted);font-size:11px;margin-top:2px}
+button.fo{width:100%;text-align:left;font:inherit;color:var(--text)}
+.fo-sep{height:1px;background:var(--line-soft);margin:6px 8px}
+.scrim{position:fixed;inset:0;z-index:50;background:rgba(0,0,0,.55);display:flex;align-items:center;justify-content:center;padding:16px}
+.sheet{width:min(440px,100%);max-height:calc(100vh - 32px);overflow:auto;padding:22px;border-radius:18px;background:var(--panel);border:1px solid var(--line);box-shadow:0 20px 50px rgba(0,0,0,.5);display:flex;flex-direction:column;gap:16px}
+.sheet h2{margin:0;font-size:18px}
+.sheet p.sub{margin:-8px 0 0;color:var(--muted);font-size:12px}
+.balrow{display:flex;flex-direction:column;gap:8px;padding:14px;border-radius:14px;background:var(--raised);border:1px solid var(--line-soft)}
+.balrow .hd{display:flex;justify-content:space-between;gap:10px;align-items:baseline}
+.balrow .hd b{font-weight:500}
+.balrow .hd small{color:var(--muted);font-size:11px;white-space:nowrap}
+.balrow .hd small.old{color:#e0b25f}
+.balrow .in{display:flex;align-items:center;gap:8px;height:46px;padding:0 14px;border:1px solid var(--line);border-radius:10px;background:var(--panel)}
+.balrow .in:focus-within{border-color:var(--accent)}
+.balrow .in span{color:var(--muted)}
+.balrow .in input{flex:1;min-width:0;background:none;border:0;outline:none;color:var(--text);font:inherit;font-size:18px;font-variant-numeric:tabular-nums}
+.sheet .acts{display:flex;gap:10px;justify-content:flex-end}
+.sheet .acts button{height:42px;padding:0 18px;border-radius:999px}
+.sheet .acts .ghost{border:1px solid var(--line);color:var(--soft)}
+.sheet .note{color:var(--muted);font-size:12px}
+.app-tile{position:relative;display:flex;flex-direction:column;gap:14px;padding:20px;border-radius:18px;background:var(--panel);border:1px solid var(--line);min-height:190px;overflow:hidden;transition:border-color .15s,transform .15s}
+.app-tile:hover{border-color:var(--accent);transform:translateY(-2px)}
+.app-tile .top{display:flex;align-items:center;justify-content:space-between;gap:10px}
+.app-tile .ic{width:52px;height:52px;border-radius:14px;background:#3a2a24;color:var(--accent);display:inline-flex !important;align-items:center;justify-content:center}
+.app-tile .ic svg{width:28px;height:28px}
+.app-tile h2{margin:0;font-size:22px}
+.app-tile .nm{display:flex;flex-direction:column;gap:4px;min-width:0}
+.app-tile .tag{color:var(--muted)}
+.app-tile .live{margin-top:auto;display:flex;align-items:center;gap:10px;min-width:0;color:var(--soft)}
+.app-tile .live img{width:36px;height:36px;border-radius:6px;object-fit:cover;flex:none}
+.app-tile .live span{overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.state{display:inline-flex;align-items:center;gap:8px;font-size:12px;color:var(--muted);white-space:nowrap}
+.dot{width:9px;height:9px;border-radius:50%;background:var(--line);flex:none}
+.dot.up{background:var(--ok);box-shadow:0 0 0 4px rgba(127,185,138,.15)}
+.dot.down{background:var(--bad);box-shadow:0 0 0 4px rgba(224,106,95,.15)}
+
+/* quick actions */
+.chips{display:flex;flex-wrap:wrap;gap:10px}
+.chip{height:44px;padding:0 16px;border-radius:999px;border:1px solid var(--line);background:var(--raised);display:inline-flex;align-items:center;gap:10px;color:var(--text);max-width:100%}
+.chip:hover{border-color:var(--accent);color:#fff}
+.chip svg{color:var(--accent);flex:none}
+.chip span{overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+
+h3{margin:0 0 12px;font-size:16px;display:flex;align-items:center;justify-content:space-between;gap:10px}
+h3 small{font-size:11px;font-weight:400;color:var(--muted)}
+.cols{display:grid;grid-template-columns:minmax(0,1.6fr) minmax(0,1fr);gap:24px;align-items:start}
+.stack{display:flex;flex-direction:column;gap:28px;min-width:0}
+.panel{padding:18px;border-radius:16px;background:var(--raised);border:1px solid var(--line-soft)}
+
+/* now playing */
+.np{display:flex;flex-direction:column;gap:10px}
+.np-item{display:flex;align-items:center;gap:14px;padding:10px;border-radius:12px;background:var(--panel);border:1px solid var(--line-soft)}
+.np-item:hover{border-color:var(--line)}
+.np-item .art{width:56px;height:56px;border-radius:8px;overflow:hidden;background:var(--cover);flex:none}
+.np-item .art.wide{width:96px}
+.np-item .art img{width:100%;height:100%;object-fit:cover}
+.np-item .tx{min-width:0;flex:1;display:flex;flex-direction:column;gap:4px}
+.np-item .tx b{font-weight:500;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.np-item .tx span{color:var(--muted);font-size:12px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.np-item .where{font-size:11px;color:var(--accent);display:flex;align-items:center;gap:6px;min-width:0;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.eq{display:inline-flex;align-items:flex-end;gap:2px;height:10px}
+.eq i{width:2px;background:var(--accent);animation:eq 1s infinite ease-in-out;height:4px}
+.eq i:nth-child(2){animation-delay:.2s}.eq i:nth-child(3){animation-delay:.4s}
+.eq.paused i{animation:none;height:3px}
+@keyframes eq{0%,100%{height:3px}50%{height:10px}}
+.bar{height:4px;border-radius:2px;background:var(--line);overflow:hidden}
+.bar span{display:block;height:100%;background:var(--accent)}
+.empty{padding:22px;border:1px dashed #4a4744;border-radius:12px;color:var(--muted);text-align:center;line-height:1.6}
+
+/* rows */
+.row{display:grid;grid-auto-flow:column;grid-auto-columns:var(--w,150px);gap:14px;overflow-x:auto;padding-bottom:6px;scrollbar-width:thin;scrollbar-color:var(--line) transparent}
+.row.wide{--w:240px}
+.card{display:flex;flex-direction:column;gap:6px;min-width:0}
+.card .cv{position:relative;aspect-ratio:1;border-radius:10px;overflow:hidden;background:var(--cover);border:1px solid var(--line-soft)}
+.card .cv.poster{aspect-ratio:2/3}
+.card .cv.land{aspect-ratio:16/9}
+.card:hover .cv{border-color:var(--accent)}
+.card .cv img{width:100%;height:100%;object-fit:cover}
+.card .cv .prog{position:absolute;left:0;right:0;bottom:0;height:4px;background:rgba(0,0,0,.5)}
+.card .cv .prog span{display:block;height:100%;background:var(--accent)}
+.card b{font-weight:500;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.card span.m{color:var(--muted);font-size:12px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+
+/* the PC */
+.svc{display:flex;flex-direction:column;gap:2px;margin-bottom:16px}
+.svc div{display:flex;align-items:center;gap:10px;padding:7px 0;border-bottom:1px solid var(--line-soft)}
+.svc div:last-child{border-bottom:none}
+.svc .n{flex:1}
+.svc .ms{color:var(--muted);font-size:11px}
+.meter{display:flex;flex-direction:column;gap:6px;margin-bottom:14px}
+.meter .l{display:flex;justify-content:space-between;gap:10px;font-size:12px;color:var(--soft)}
+.meter .l b{color:var(--text);font-weight:500}
+.diskbar{display:flex;height:10px;border-radius:5px;overflow:hidden;background:var(--line)}
+.diskbar span{height:100%}
+.legend{display:flex;flex-wrap:wrap;gap:6px 14px;font-size:11px;color:var(--muted)}
+.legend i{display:inline-block;width:8px;height:8px;border-radius:2px;margin-right:6px;vertical-align:0}
+.facts{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:10px}
+.fact{padding:12px;border-radius:12px;background:var(--panel)}
+.fact span{display:block;font-size:11px;color:var(--muted);margin-bottom:4px}
+.fact b{font-size:16px;font-weight:500;font-variant-numeric:tabular-nums}
+
+/* sign in */
+.login{min-height:100vh;min-height:100dvh;display:grid;place-items:center;padding:24px}
+.login form{width:100%;max-width:420px;display:flex;flex-direction:column;gap:16px;padding:32px;background:var(--panel);border:1px solid var(--line);border-radius:16px}
+.login .brand{justify-content:center;font-size:28px}
+.login p{margin:0;text-align:center;color:var(--muted);line-height:1.6}
+.field{display:flex;flex-direction:column;gap:6px;color:var(--soft);font-size:12px}
+.field input{height:44px;padding:0 14px;border:1px solid var(--line);border-radius:10px;background:var(--raised);color:var(--text);font:inherit;outline:none}
+.field input:focus{border-color:var(--accent)}
+fieldset{border:1px solid var(--line-soft);border-radius:12px;padding:14px;display:flex;flex-direction:column;gap:12px;margin:0}
+legend{padding:0 6px;color:var(--muted);font-size:11px;letter-spacing:.1em;text-transform:uppercase}
+.check{display:flex;align-items:center;gap:10px;color:var(--soft);min-height:32px}
+.check input{width:18px;height:18px;accent-color:var(--accent)}
+.primary{height:46px;border-radius:999px;background:var(--accent);color:var(--accent-ink);font-weight:700}
+.primary:disabled{opacity:.6}
+.err{color:#f0a090;font-size:12px;min-height:16px;text-align:center;line-height:1.5}
+.toast{position:fixed;left:50%;bottom:30px;transform:translateX(-50%);background:var(--text);color:var(--bg);padding:10px 16px;border-radius:8px;font-size:12px;z-index:50;opacity:0;transition:opacity .2s;pointer-events:none}
+.toast.show{opacity:1}
+.alerts{display:flex;align-items:center;gap:10px;margin-top:14px;padding-top:14px;border-top:1px solid var(--line-soft);font-size:12px;color:var(--soft)}
+.alerts .t{flex:1;min-width:0}
+.dot.warn{background:#e0b25f;box-shadow:0 0 0 4px rgba(224,178,95,.15)}
+.backups{margin-top:14px;padding-top:14px;border-top:1px solid var(--line-soft);font-size:12px;color:var(--soft)}
+.backups .hd{display:flex;align-items:center;gap:10px}
+.backups .hd .t{flex:1;min-width:0}
+.backups .hd small{display:block;color:var(--muted);font-size:11px;margin-top:2px}
+.backups .where{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:10px;margin-top:10px}
+.backups .where div{padding:10px 12px;border-radius:12px;background:var(--panel)}
+.backups .where span{display:block;font-size:11px;color:var(--muted);margin-bottom:4px}
+.backups .where b{font-weight:500;font-variant-numeric:tabular-nums}
+.backups .where b.bad{color:var(--bad)}
+.alerts .t small{display:block;color:var(--muted);font-size:11px;margin-top:2px}
+.mini{height:36px;padding:0 12px;border-radius:999px;border:1px solid var(--line);color:var(--text);font-size:12px}
+.mini:hover{border-color:var(--accent)}
+footer{display:flex;flex-wrap:wrap;justify-content:space-between;gap:10px;color:var(--muted);font-size:11px}
+footer button{color:var(--muted);text-decoration:underline}
+
+@media (max-width: 900px){
+  #app{padding-left:0}
+  .extras{position:static;width:auto;padding:0;border:0;background:none;flex-direction:row;flex-wrap:wrap;align-items:center;gap:8px}
+  .extras h3{margin:0 6px 0 0}
+  .ex{width:auto;flex-direction:row;gap:10px;padding:6px 14px 6px 6px;border:1px solid var(--line);border-radius:999px;background:var(--raised);font-size:13px;color:var(--text)}
+  .ex .ic{width:32px;height:32px;border-radius:999px}
+  .ex .dot{position:static;order:3;border:0}
+  .ex .tip{display:none}
+  button.ex{border:1px solid var(--line);background:var(--raised)}
+  .flyout{left:0;top:calc(100% + 8px);width:min(290px,calc(100vw - 32px))}
+  .apps{grid-template-columns:minmax(0,1fr)}
+  .app-tile{min-height:0;flex-direction:row;flex-wrap:wrap;align-items:center;gap:12px 14px;padding:16px}
+  .app-tile .top{display:contents}
+  .app-tile .ic{width:48px;height:48px}
+  .app-tile .nm{flex:1;min-width:0}
+  .app-tile .ic{order:0}
+  .app-tile .nm{order:1}
+  .app-tile .state{order:2}
+  .app-tile .live{order:3}
+  .app-tile .live{flex-basis:100%;margin-top:0}
+  .cols{grid-template-columns:minmax(0,1fr)}
+  .clock{display:none}
+}
+@media (max-width: 480px){ .chip{flex:1 1 calc(50% - 10px);justify-content:flex-start} }
+</style>
+</head>
+<body>
+
+<div id="login" class="login hidden">
+  <form id="loginForm">
+    <div class="brand"><span data-icon="temple"></span>Olympus</div>
+    <p>Sign in once so Olympus can show what's playing and search your music and films.</p>
+    <fieldset><legend>Apollo · Navidrome</legend>
+      <label class="field">Username<input id="nu" autocomplete="username"></label>
+      <label class="field">Password<input id="np" type="password" autocomplete="current-password"></label>
+    </fieldset>
+    <label class="check"><input type="checkbox" id="same" checked> Same login for Theia</label>
+    <fieldset id="jfSet" class="hidden"><legend>Theia · Jellyfin</legend>
+      <label class="field">Username<input id="ju" autocomplete="off"></label>
+      <label class="field">Password<input id="jp" type="password" autocomplete="off"></label>
+    </fieldset>
+    <button class="primary" id="lbtn" type="submit">Enter Olympus</button>
+    <div class="err" id="lerr" role="alert"></div>
+  </form>
+</div>
+
+<div id="app" class="hidden">
+  <div class="wrap">
+    <header>
+      <div>
+        <div class="brand"><span data-icon="temple"></span>Olympus</div>
+        <h1 class="hello" id="hello">Hello</h1>
+      </div>
+      <div class="clock"><b id="time">--:--</b><span id="date"></span></div>
+    </header>
+
+    <div class="searchbox">
+      <label class="search"><span data-icon="search"></span><span class="sr">Search music, films and shows</span>
+        <input id="q" type="search" placeholder="Search music, films and shows…" autocomplete="off" aria-controls="results"></label>
+      <div class="results hidden" id="results" role="listbox" aria-label="Search results"></div>
+    </div>
+
+    <section class="apps" aria-label="Apps">
+      <a class="app-tile" id="t-odysseus" target="_blank" rel="noopener">
+        <div class="top"><span class="ic" data-icon="sail"></span><span class="state"><span class="dot"></span><span class="st">Checking…</span></span></div>
+        <div class="nm"><h2>Odysseus</h2><div class="tag">AI workspace</div></div>
+        <div class="live"><span>Ask, research, write and plan.</span></div>
+      </a>
+      <a class="app-tile" id="t-apollo" target="_blank" rel="noopener">
+        <div class="top"><span class="ic" data-icon="sun"></span><span class="state"><span class="dot"></span><span class="st">Checking…</span></span></div>
+        <div class="nm"><h2>Apollo</h2><div class="tag">Music</div></div>
+        <div class="live"><span>…</span></div>
+      </a>
+      <a class="app-tile" id="t-theia" target="_blank" rel="noopener">
+        <div class="top"><span class="ic" data-icon="eye"></span><span class="state"><span class="dot"></span><span class="st">Checking…</span></span></div>
+        <div class="nm"><h2>Theia</h2><div class="tag">Films &amp; shows</div></div>
+        <div class="live"><span>…</span></div>
+      </a>
+    </section>
+
+    <nav class="extras" aria-label="Extras">
+      <h3>Extras</h3>
+      <div class="exg">
+        <button class="ex" id="x-plutus" aria-expanded="false" aria-controls="plutusMenu"><span class="dot"></span><span class="ic" data-icon="coins"></span><span class="nm">Plutus</span></button>
+        <div class="flyout hidden" id="plutusMenu">
+          <h4>Plutus · your money</h4>
+          <a class="fo" id="t-budget" target="_blank" rel="noopener"><span class="ic" data-icon="wallet"></span><span class="tx">Budget<small class="st">Monthly budget &amp; spending</small></span><span class="dot"></span></a>
+          <a class="fo" id="t-investments" target="_blank" rel="noopener"><span class="ic" data-icon="chart"></span><span class="tx">Investments<small class="st">ISAs &amp; portfolio</small></span><span class="dot"></span></a>
+          <div class="fo-sep"></div>
+          <button class="fo" id="openBalances"><span class="ic" data-icon="pencil"></span><span class="tx">Update balances<small id="balHint">Moneybox LISA · Cash ISA</small></span></button>
+        </div>
+      </div>
+      <a class="ex" id="t-cerberus" target="_blank" rel="noopener"><span class="dot"></span><span class="ic" data-icon="shield"></span><span class="nm">Cerberus</span><span class="tip">Cerberus<small class="st">Passwords · checking…</small></span></a>
+    </nav>
+
+    <section aria-label="Quick actions"><div class="chips" id="chips"></div></section>
+
+    <div class="cols">
+      <div class="stack">
+        <section><h3>Playing now <small id="npWhen"></small></h3><div class="np" id="nowPlaying"><div class="empty">Checking…</div></div></section>
+        <section id="cwSec" class="hidden"><h3>Continue watching</h3><div class="row wide" id="cw"></div></section>
+        <section id="newMusicSec" class="hidden"><h3>New in Apollo</h3><div class="row" id="newMusic"></div></section>
+        <section id="newFilmSec" class="hidden"><h3>New in Theia</h3><div class="row" id="newFilm" style="--w:130px"></div></section>
+      </div>
+      <aside class="panel" aria-label="The PC">
+        <h3>The PC <small id="uptime"></small></h3>
+        <div class="svc" id="svc"></div>
+        <div class="meter" id="disk"></div>
+        <div class="facts" id="facts"></div>
+        <div class="alerts" id="alerts"><span class="dot"></span><span class="t">Phone alerts</span><button class="mini" id="testAlert">Send a test</button></div>
+        <div class="backups hidden" id="backups"></div>
+      </aside>
+    </div>
+
+    <footer><span>Olympus 1.5 · <span id="where"></span></span><button id="logout">Sign out of Olympus</button></footer>
+  </div>
+</div>
+
+<div class="scrim hidden" id="balScrim">
+  <form class="sheet" id="balSheet" role="dialog" aria-modal="true" aria-labelledby="balTitle">
+    <h2 id="balTitle">Update balances</h2>
+    <p class="sub">Type what each account shows in its app today. Ghostfolio keeps the history.</p>
+    <div id="balRows"><div class="note">Loading…</div></div>
+    <div class="acts"><button type="button" class="ghost" id="balCancel">Cancel</button><button type="submit" class="primary" id="balSave">Save</button></div>
+  </form>
+</div>
+
+<div class="toast" id="toast" role="status"></div>
+
+<script>
+(() => {
+'use strict';
+const P = (d, extra='') => `<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" ${extra}>${d}</svg>`;
+const ICONS = {
+  temple: P('<path d="M3 9l9-5 9 5M4 9h16M6 9v9M10 9v9M14 9v9M18 9v9M3 20h18M4 18h16"/>', 'width="24" height="24"'),
+  sail: P('<path d="M12 3v15M12 4l7 12h-7M12 7l-6 9h6M3 19c3 2 15 2 18 0"/>'),
+  sun: P('<circle cx="12" cy="12" r="4"/><path d="M12 2v2M12 20v2M2 12h2M20 12h2M4.9 4.9l1.4 1.4M17.7 17.7l1.4 1.4M4.9 19.1l1.4-1.4M17.7 6.3l1.4-1.4"/>'),
+  eye: P('<path d="M2 12s3.6-7 10-7 10 7 10 7-3.6 7-10 7S2 12 2 12z"/><circle cx="12" cy="12" r="3"/>'),
+  search: P('<circle cx="11" cy="11" r="7"/><path d="M20 20l-4-4"/>'),
+  shuffle: P('<path d="M16 3h5v5M4 20L21 3M21 16v5h-5M15 15l6 6M4 4l5 5"/>'),
+  heart: P('<path d="M12 21s-7-4.5-9-9a5 5 0 0 1 9-3 5 5 0 0 1 9 3c-2 4.5-9 9-9 9z"/>'),
+  play: P('<path d="M7 4l13 8-13 8z"/>'),
+  dl: P('<path d="M12 4v11M7 10l5 5 5-5M5 20h14"/>'),
+  scan: P('<path d="M3 12a9 9 0 1 0 3-6.7L3 8M3 3v5h5"/>'),
+  chat: P('<path d="M4 5h16v11H9l-5 4z"/>'),
+  list: P('<path d="M4 6h16M4 12h16M4 18h10"/>'),
+  coins: P('<ellipse cx="9" cy="6" rx="6" ry="2.5"/><path d="M3 6v4c0 1.4 2.7 2.5 6 2.5s6-1.1 6-2.5V6"/><path d="M3 10v4c0 1.4 2.7 2.5 6 2.5 1 0 2-.1 2.8-.3"/><ellipse cx="16" cy="15" rx="5" ry="2.2"/><path d="M11 15v3.5c0 1.2 2.2 2.2 5 2.2s5-1 5-2.2V15"/>'),
+  pencil: P('<path d="M4 20h4L19 9l-4-4L4 16v4z"/><path d="M13 7l4 4"/>'),
+  wallet: P('<path d="M4 7h14a2 2 0 0 1 2 2v9a2 2 0 0 1-2 2H5a1 1 0 0 1-1-1V7z"/><path d="M4 7l11-3v3M16 13h2"/>'),
+  chart: P('<path d="M4 20V4M4 20h16M8 16l4-5 3 3 5-7"/>'),
+  shield: P('<path d="M12 3l8 3v6c0 4.5-3.4 8.3-8 9-4.6-.7-8-4.5-8-9V6z"/><rect x="9" y="11" width="6" height="5" rx="1"/><path d="M10 11V9.5a2 2 0 0 1 4 0V11"/>'),
+};
+const icon = (n) => ICONS[n] || '';
+document.querySelectorAll('[data-icon]').forEach(el => { el.innerHTML = icon(el.dataset.icon); el.style.display = 'inline-flex'; });
+
+const $ = (s, r=document) => r.querySelector(s);
+const esc = (s) => String(s ?? '').replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+const store = {
+  get(k, d=null){ try { const v = localStorage.getItem('olympus.'+k); return v == null ? d : JSON.parse(v); } catch { return d; } },
+  set(k, v){ try { localStorage.setItem('olympus.'+k, JSON.stringify(v)); } catch {} },
+  del(k){ try { localStorage.removeItem('olympus.'+k); } catch {} },
+};
+let toastT;
+function toast(m){ const t = $('#toast'); t.textContent = m; t.classList.add('show'); clearTimeout(toastT); toastT = setTimeout(() => t.classList.remove('show'), 2400); }
+const fmtBytes = (b) => { if (b == null) return '—'; const u = ['B','KB','MB','GB','TB']; let i = 0; while (b >= 1024 && i < 4) { b /= 1024; i++; } return b.toFixed(i > 2 ? 1 : 0) + ' ' + u[i]; };
+const fmtNum = (n) => Number(n || 0).toLocaleString('en-GB');
+const TICKS = 10000000;
+
+/* ---------- where each app lives ---------- */
+const host = location.hostname;
+const viaTailscale = host.endsWith('.ts.net');
+const APPS = {
+  odysseus: viaTailscale ? `https://${host}:10000` : `http://${host}:7011`,
+  apollo: viaTailscale ? `https://${host}` : `http://${host}:8090`,
+  theia: viaTailscale ? `https://${host}:8443` : `http://${host}:8095`,
+  cerberus: viaTailscale ? `https://${host}:7443` : `http://${host}:8222`,
+};
+$('#where').textContent = viaTailscale ? 'via Tailscale' : 'on this PC';
+for (const k of Object.keys(APPS)) $('#t-' + k).href = APPS[k] + '/';
+$('#t-budget').href = `http://${host}:5006/`; $('#t-investments').href = `http://${host}:3333/`;
+fetch('/api/links').then(r => r.json()).then(l => { for (const k of ['cerberus', 'budget', 'investments']) if (l[k]) $('#t-' + k).href = l[k]; }).catch(() => {});
+const plutusBtn = $('#x-plutus'), plutusMenu = $('#plutusMenu');
+const setPlutus = (open) => { plutusMenu.classList.toggle('hidden', !open); plutusBtn.setAttribute('aria-expanded', open); };
+plutusBtn.addEventListener('click', (e) => { e.stopPropagation(); setPlutus(plutusMenu.classList.contains('hidden')); });
+document.addEventListener('click', (e) => { if (!plutusMenu.contains(e.target)) setPlutus(false); });
+document.addEventListener('keydown', (e) => { if (e.key === 'Escape') { setPlutus(false); closeBalances(); } });
+
+/* ---------- Plutus: hand-kept balances ---------- */
+let balData = null;
+const daysAgo = (d) => d ? Math.floor((Date.now() - new Date(d)) / 864e5) : null;
+const ago = (d) => { const n = daysAgo(d); return n == null ? 'never updated' : n === 0 ? 'updated today' : n === 1 ? 'updated yesterday' : `updated ${n} days ago`; };
+async function loadBalances(){
+  try { balData = await (await fetch('/api/plutus/balances')).json(); } catch { balData = null; }
+  const stale = balData && balData.accounts && balData.accounts.some(a => (daysAgo(a.updated) ?? 99) > 35);
+  $('#balHint').textContent = !balData || !balData.setup ? 'Not set up yet' : stale ? 'Due for an update' : 'Moneybox LISA · Cash ISA';
+  $('#balHint').style.color = stale ? '#e0b25f' : '';
+  return balData;
+}
+async function openBalances(){
+  setPlutus(false);
+  $('#balScrim').classList.remove('hidden');
+  $('#balRows').innerHTML = '<div class="note">Loading…</div>';
+  const d = await loadBalances();
+  if (!d || !d.setup) { $('#balRows').innerHTML = '<div class="note">Not set up yet. Run <code>bash ~/plutus/plutus-sync-setup.sh --olympus</code> on the PC.</div>'; $('#balSave').disabled = true; return; }
+  if (d.error) { $('#balRows').innerHTML = `<div class="note">Couldn't reach Ghostfolio: ${esc(d.error)}</div>`; $('#balSave').disabled = true; return; }
+  $('#balSave').disabled = false;
+  $('#balRows').innerHTML = d.accounts.map(a => `<label class="balrow"><span class="hd"><b>${esc(a.name)}</b><small class="${(daysAgo(a.updated) ?? 99) > 35 ? 'old' : ''}">${ago(a.updated)}</small></span>
+    <span class="in"><span>${a.currency === 'GBP' ? '£' : esc(a.currency)}</span><input inputmode="decimal" data-id="${esc(a.id)}" data-was="${a.balance}" value="${Number(a.balance).toFixed(2)}" aria-label="${esc(a.name)} balance"></span></label>`).join('');
+  const first = $('#balRows input'); if (first) { first.focus(); first.select(); }
+}
+function closeBalances(){ $('#balScrim').classList.add('hidden'); if (location.hash === '#balances') history.replaceState(null, '', location.pathname); }
+$('#openBalances').addEventListener('click', (e) => { e.stopPropagation(); openBalances(); });
+$('#balCancel').addEventListener('click', closeBalances);
+$('#balScrim').addEventListener('click', (e) => { if (e.target.id === 'balScrim') closeBalances(); });
+$('#balSheet').addEventListener('submit', async (e) => {
+  e.preventDefault();
+  const inputs = [...document.querySelectorAll('#balRows input')];
+  const bad = inputs.find(i => !/^\d+(\.\d{1,2})?$/.test(i.value.replace(/[£,\s]/g, '')));
+  if (bad) { bad.focus(); toast('Use a number like 1234.56'); return; }
+  $('#balSave').disabled = true;
+  let saved = 0, failed = 0;
+  for (const i of inputs) {
+    const v = Number(i.value.replace(/[£,\s]/g, ''));
+    try {
+      const r = await (await fetch('/api/plutus/balance', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ id: i.dataset.id, balance: v }) })).json();
+      r.ok ? saved++ : failed++;
+    } catch { failed++; }
+  }
+  $('#balSave').disabled = false;
+  if (failed) { toast(`Saved ${saved}, ${failed} failed — try again`); return; }
+  toast('Balances saved to Ghostfolio'); closeBalances(); loadBalances();
+});
+if (location.hash === '#balances') setTimeout(() => { if (nav || jfa) openBalances(); }, 600);
+window.addEventListener('hashchange', () => { if (location.hash === '#balances' && (nav || jfa)) openBalances(); });
+
+/* ---------- sign in ---------- */
+let nav = store.get('nav');   // { u, s, t }
+let jfa = store.get('jf');    // { token, userId, name }
+const deviceId = store.get('device') || (() => { const d = crypto.randomUUID ? crypto.randomUUID() : String(Date.now()); store.set('device', d); return d; })();
+const jfAuth = () => `MediaBrowser Client="Olympus", Device="Browser", DeviceId="${deviceId}", Version="1.0.0"` + (jfa ? `, Token="${jfa.token}"` : '');
+
+async function navApi(method, params={}){
+  if (!nav) throw new Error('not signed in');
+  const q = new URLSearchParams({ u: nav.u, t: nav.t, s: nav.s, v: '1.16.1', c: 'olympus', f: 'json', ...params });
+  const r = await fetch(`/nav/rest/${method}?${q}`);
+  const j = (await r.json())['subsonic-response'];
+  if (!j || j.status !== 'ok') throw new Error((j && j.error && j.error.message) || 'Navidrome error');
+  return j;
+}
+const navCover = (id, size=120) => nav && id ? `/nav/rest/getCoverArt?${new URLSearchParams({ u: nav.u, t: nav.t, s: nav.s, v: '1.16.1', c: 'olympus', id, size })}` : '';
+async function jf(path, { method='GET', params, body } = {}){
+  if (!jfa) throw new Error('not signed in');
+  const q = params ? '?' + new URLSearchParams(Object.entries(params).filter(([, v]) => v != null)) : '';
+  const r = await fetch('/jf' + path + q, { method, headers: { Authorization: jfAuth(), ...(body ? { 'Content-Type': 'application/json' } : {}) }, body: body ? JSON.stringify(body) : undefined });
+  if (!r.ok) { const e = new Error('Jellyfin said ' + r.status); e.status = r.status; throw e; }
+  const t = await r.text(); return t ? JSON.parse(t) : null;
+}
+async function jfAny(paths, opts){ let last; for (const p of paths) { try { return await jf(p, opts); } catch (e) { last = e; if (e.status !== 404 && e.status !== 405) throw e; } } throw last; }
+const jfImg = (id, type='Primary', w=300) => `/jf/Items/${encodeURIComponent(id)}/Images/${type}?fillWidth=${w}&quality=85`;
+
+$('#same').addEventListener('change', (e) => $('#jfSet').classList.toggle('hidden', e.target.checked));
+$('#loginForm').addEventListener('submit', async (e) => {
+  e.preventDefault();
+  const b = $('#lbtn'); b.disabled = true; $('#lerr').textContent = '';
+  const nu = $('#nu').value.trim(), np = $('#np').value;
+  const same = $('#same').checked;
+  const ju = same ? nu : $('#ju').value.trim(), jp = same ? np : $('#jp').value;
+  const problems = [];
+  try {
+    const r = await fetch('/nav/auth/login', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ username: nu, password: np }) });
+    if (!r.ok) throw 0;
+    const j = await r.json(); nav = { u: j.username || nu, s: j.subsonicSalt, t: j.subsonicToken, name: j.name || nu }; store.set('nav', nav);
+  } catch { problems.push('Apollo (Navidrome)'); }
+  try {
+    const r = await fetch('/jf/Users/AuthenticateByName', { method: 'POST', headers: { 'Content-Type': 'application/json', Authorization: jfAuth() }, body: JSON.stringify({ Username: ju, Pw: jp }) });
+    if (!r.ok) throw 0;
+    const j = await r.json(); jfa = { token: j.AccessToken, userId: j.User.Id, name: j.User.Name }; store.set('jf', jfa);
+  } catch { problems.push('Theia (Jellyfin)'); }
+  b.disabled = false;
+  if (problems.length === 2) { $('#lerr').textContent = "Neither login worked. Check the usernames and passwords."; return; }
+  if (problems.length) toast(`Signed in, but ${problems[0]} said no. Its panels will stay empty.`);
+  $('#np').value = ''; $('#jp').value = '';
+  start();
+});
+$('#logout').addEventListener('click', () => { store.del('nav'); store.del('jf'); nav = jfa = null; location.reload(); });
+
+/* ---------- clock & greeting ---------- */
+function tickClock(){
+  const d = new Date(); const h = d.getHours();
+  $('#time').textContent = d.toLocaleTimeString('en-GB', { hour: '2-digit', minute: '2-digit' });
+  $('#date').textContent = d.toLocaleDateString('en-GB', { weekday: 'long', day: 'numeric', month: 'long' });
+  const name = (nav && nav.name) || (jfa && jfa.name) || '';
+  const part = h < 5 ? 'Up late' : h < 12 ? 'Good morning' : h < 18 ? 'Good afternoon' : 'Good evening';
+  $('#hello').textContent = part + (name ? ', ' + name.charAt(0).toUpperCase() + name.slice(1) : '');
+}
+
+/* ---------- status ---------- */
+const SVC_NAMES = { odysseus: 'Odysseus', apollo: 'Apollo', theia: 'Theia', cerberus: 'Cerberus', budget: 'Plutus · budget', investments: 'Plutus · investments', navidrome: 'Navidrome · music library', jellyfin: 'Jellyfin · film library' };
+async function loadStatus(){
+  let s;
+  try { s = await (await fetch('/api/status')).json(); } catch { return; }
+  {
+    const b = s.budget && s.budget.up, i = s.investments && s.investments.up;
+    $('#x-plutus .dot').className = 'dot ' + (b && i ? 'up' : b || i ? 'warn' : 'down');
+    $('#t-budget .dot').className = 'dot ' + (b ? 'up' : 'down');
+    $('#t-investments .dot').className = 'dot ' + (i ? 'up' : 'down');
+  }
+  for (const k of ['cerberus']) {
+    const t = $('#t-' + k); const up = s[k] && s[k].up;
+    t.querySelector('.dot').className = 'dot ' + (up ? 'up' : 'down');
+    t.querySelector('.st').textContent = 'Passwords · ' + (up ? 'running' : 'not running');
+  }
+  for (const k of ['odysseus', 'apollo', 'theia']) {
+    const t = $('#t-' + k); const engine = k === 'apollo' ? s.navidrome : k === 'theia' ? s.jellyfin : null;
+    const up = s[k] && s[k].up && (!engine || engine.up);
+    t.querySelector('.dot').className = 'dot ' + (up ? 'up' : 'down');
+    t.querySelector('.st').textContent = up ? 'Running' : (s[k] && s[k].up ? `${k === 'apollo' ? 'Navidrome' : 'Jellyfin'} is down` : 'Not running');
+  }
+  $('#svc').innerHTML = Object.entries(SVC_NAMES).map(([k, n]) => `<div><span class="dot ${s[k] && s[k].up ? 'up' : 'down'}"></span><span class="n">${esc(n)}</span><span class="ms">${s[k] && s[k].up ? s[k].ms + ' ms' : 'down'}</span></div>`).join('');
+}
+
+/* ---------- the PC ---------- */
+async function loadAlerts(){
+  try {
+    const a = await (await fetch('/api/alerts')).json();
+    $('#alerts .dot').className = 'dot ' + (a.ok === false ? 'down' : a.ok ? 'up' : '');
+    $('#alerts .t').innerHTML = `Phone alerts<small>${a.ok === false ? "Can't reach ntfy" : `ntfy topic “${esc(a.topic)}”${a.last ? ' · last sent ' + new Date(a.last * 1000).toLocaleString('en-GB', { hour: '2-digit', minute: '2-digit', day: 'numeric', month: 'short' }) : ''}`}</small>`;
+  } catch {}
+}
+$('#testAlert').addEventListener('click', async () => {
+  try { const r = await (await fetch('/api/alerts/test', { method: 'POST' })).json(); toast(r.ok ? 'Sent — check your phone' : "Couldn't reach ntfy"); loadAlerts(); }
+  catch { toast("Couldn't reach Olympus"); }
+});
+async function loadSystem(){
+  let s;
+  try { s = await (await fetch('/api/system')).json(); } catch { return; }
+  const d = s.disk; const f = s.folders || {};
+  const parts = [['Music', f.music, '#e0805f'], ['Films', f.movies, '#8fa8e0'], ['Shows', f.shows, '#7fb98a']].filter(p => p[1]);
+  const media = parts.reduce((t, p) => t + p[1], 0);
+  const other = Math.max(0, d.used - media);
+  $('#disk').innerHTML = `<div class="l"><span>Storage <span style="color:var(--muted)">${esc(d.path)}</span></span><b>${fmtBytes(d.free)} free</b></div>
+    <div class="diskbar" role="img" aria-label="${fmtBytes(d.used)} of ${fmtBytes(d.total)} used">${parts.map(p => `<span style="width:${p[1] / d.total * 100}%;background:${p[2]}"></span>`).join('')}<span style="width:${other / d.total * 100}%;background:#5a5754"></span></div>
+    <div class="legend">${parts.map(p => `<span><i style="background:${p[2]}"></i>${p[0]} ${fmtBytes(p[1])}</span>`).join('')}<span><i style="background:#5a5754"></i>Everything else ${fmtBytes(other)}</span></div>`;
+  const mem = s.mem; const g = s.gpu;
+  const facts = [
+    ['CPU load', `${Math.round(s.load[0] / (s.cpus || 1) * 100)}%`],
+    ['Memory', mem ? `${fmtBytes(mem.used)} / ${fmtBytes(mem.total)}` : '—'],
+  ];
+  if (s.cpuTemp != null) facts.push(['CPU temp', `${s.cpuTemp}°C`]);
+  if (g) { facts.push(['Graphics', `${g.util}% · ${g.temp}°C`]); facts.push(['Video memory', `${fmtBytes(g.memUsed)} / ${fmtBytes(g.memTotal)}`]); }
+  $('#facts').innerHTML = facts.map(([k, v]) => `<div class="fact"><span>${esc(k)}</span><b>${esc(v)}</b></div>`).join('');
+  if (s.uptime) { const h = Math.floor(s.uptime / 3600); $('#uptime').textContent = h >= 48 ? `up ${Math.floor(h / 24)} days` : `up ${h}h ${Math.floor(s.uptime % 3600 / 60)}m`; }
+}
+
+async function loadBackup(){
+  let b;
+  try { b = await (await fetch('/api/backup')).json(); } catch { return; }
+  const el = $('#backups');
+  if (b.missing) { el.classList.add('hidden'); return; }
+  el.classList.remove('hidden');
+  const when = b.finished ? new Date(b.finished) : null;
+  const ageH = when ? (Date.now() - when) / 3.6e6 : Infinity;
+  const stale = ageH > 36;
+  const cls = b.ok === false ? 'down' : stale ? 'warn' : 'up';
+  const nice = (d) => {
+    const t = d.toLocaleTimeString('en-GB', { hour: '2-digit', minute: '2-digit' });
+    const days = Math.floor((new Date().setHours(0,0,0,0) - new Date(d).setHours(0,0,0,0)) / 864e5);
+    return days === 0 ? `today ${t}` : days === 1 ? `yesterday ${t}` : `${d.toLocaleDateString('en-GB', { day: 'numeric', month: 'short' })} ${t}`;
+  };
+  const msg = b.ok === false ? 'Last backup had a problem' : stale ? 'No backup for a while' : 'All backed up';
+  const place = (label, r, extra) => {
+    if (!r) return `<div><span>${label}</span><b style="color:var(--muted)">Not set up</b></div>`;
+    if (!r.ok) return `<div><span>${label}</span><b class="bad">✗ ${esc(r.error || 'failed')}</b></div>`;
+    return `<div><span>${label} · ${r.snapshots} backup${r.snapshots === 1 ? '' : 's'}</span><b>✓ ${fmtBytes(r.size)}</b>${extra ? `<span style="margin:4px 0 0">${extra}</span>` : ''}</div>`;
+  };
+  el.innerHTML = `<div class="hd"><span class="dot ${cls}"></span><span class="t">Backups · ${msg}<small>${when ? 'Last ' + nice(when) : 'Never run'} · runs nightly at 3am</small></span></div>
+    <div class="where">${place('HDD', b.hdd || b.usb, (b.hdd_free || b.usb_free) ? fmtBytes(b.hdd_free || b.usb_free) + ' free' : '')}${place('Koofr', b.koofr, 'offsite')}</div>`;
+}
+
+/* ---------- live bits ---------- */
+let resumeItems = [];
+async function loadLive(){
+  const items = [];
+  // music playing anywhere (any account)
+  if (nav) {
+    try {
+      const r = await navApi('getNowPlaying');
+      const list = (r.nowPlaying && r.nowPlaying.entry) || [];
+      list.filter(e => (e.minutesAgo || 0) < 10).forEach(e => items.push({ kind: 'music', title: e.title, sub: `${e.artist || ''}${e.album ? ' · ' + e.album : ''}`,
+        who: e.username, where: e.playerName || 'Apollo', art: navCover(e.coverArt, 120), href: `${APPS.apollo}/#/album/${encodeURIComponent(e.albumId || '')}`, paused: false }));
+    } catch {}
+  }
+  // films and shows playing anywhere
+  if (jfa) {
+    try {
+      const sessions = await jf('/Sessions', { params: { activeWithinSeconds: 120 } });
+      (sessions || []).filter(x => x.NowPlayingItem).forEach(x => {
+        const it = x.NowPlayingItem; const ps = x.PlayState || {};
+        const isMusic = it.Type === 'Audio';
+        if (isMusic) return;
+        items.push({ kind: 'video', title: it.Type === 'Episode' ? it.SeriesName : it.Name,
+          sub: it.Type === 'Episode' ? `S${it.ParentIndexNumber}:E${it.IndexNumber} · ${it.Name}` : (it.ProductionYear || ''),
+          who: x.UserName, where: x.DeviceName || x.Client, art: jfImg(it.Type === 'Episode' ? it.Id : it.Id, it.Type === 'Episode' ? 'Primary' : 'Backdrop', 300),
+          pct: it.RunTimeTicks ? (ps.PositionTicks || 0) / it.RunTimeTicks * 100 : 0, paused: !!ps.IsPaused,
+          href: `${APPS.theia}/#/item/${encodeURIComponent(it.Type === 'Episode' && it.SeriesId ? it.SeriesId : it.Id)}` });
+      });
+    } catch {}
+  }
+  $('#nowPlaying').innerHTML = items.length ? items.map(i => `<a class="np-item" href="${esc(i.href)}" target="_blank" rel="noopener">
+      <span class="art ${i.kind === 'video' ? 'wide' : ''}">${i.art ? `<img src="${esc(i.art)}" alt="" onerror="this.remove()">` : ''}</span>
+      <span class="tx"><span class="where"><span class="eq ${i.paused ? 'paused' : ''}"><i></i><i></i><i></i></span>${esc(i.paused ? 'Paused' : 'Playing')} on ${esc(i.where)}${i.who ? ' · ' + esc(i.who) : ''}</span>
+        <b>${esc(i.title)}</b><span>${esc(i.sub)}</span>${i.pct ? `<span class="bar"><span style="width:${i.pct}%"></span></span>` : ''}</span></a>`).join('')
+    : `<div class="empty">Nothing playing right now. Put some music on, or start a film.</div>`;
+  $('#npWhen').textContent = 'updated ' + new Date().toLocaleTimeString('en-GB', { hour: '2-digit', minute: '2-digit' });
+
+  // tile lines
+  const music = items.find(i => i.kind === 'music');
+  const film = items.find(i => i.kind === 'video');
+  if (music) $('#t-apollo .live').innerHTML = `${music.art ? `<img src="${esc(music.art)}" alt="">` : ''}<span>▶ ${esc(music.title)} — ${esc(music.sub.split(' · ')[0])}</span>`;
+  else if (nav) navApi('getScanStatus').then(r => { $('#t-apollo .live').innerHTML = `<span>${fmtNum(r.scanStatus && r.scanStatus.count)} songs in the library</span>`; }).catch(() => {});
+  else $('#t-apollo .live').innerHTML = '<span>Not signed in</span>';
+  if (film) $('#t-theia .live').innerHTML = `<span>▶ ${esc(film.title)} on ${esc(film.where)}</span>`;
+  else if (jfa) jf('/Items/Counts', { params: { userId: jfa.userId } }).then(c => { $('#t-theia .live').innerHTML = `<span>${fmtNum(c.MovieCount)} films · ${fmtNum(c.SeriesCount)} shows</span>`; }).catch(() => {});
+  else $('#t-theia .live').innerHTML = '<span>Not signed in</span>';
+
+  // continue watching
+  if (jfa) {
+    try {
+      const r = await jfAny(['/UserItems/Resume', `/Users/${jfa.userId}/Items/Resume`], { params: { userId: jfa.userId, Limit: 10, MediaTypes: 'Video' } });
+      resumeItems = r.Items || [];
+      $('#cwSec').classList.toggle('hidden', !resumeItems.length);
+      $('#cw').innerHTML = resumeItems.map(it => `<a class="card" href="${APPS.theia}/#/play/${encodeURIComponent(it.Id)}" target="_blank" rel="noopener">
+        <span class="cv land"><img src="${jfImg(it.Id, it.Type === 'Episode' ? 'Primary' : 'Backdrop', 480)}" alt="" onerror="this.remove()">
+          <span class="prog"><span style="width:${(it.UserData && it.UserData.PlayedPercentage) || 0}%"></span></span></span>
+        <b>${esc(it.Type === 'Episode' ? it.SeriesName : it.Name)}</b><span class="m">${esc(it.Type === 'Episode' ? `S${it.ParentIndexNumber}:E${it.IndexNumber} · ${it.Name}` : 'Resume')}</span></a>`).join('');
+    } catch {}
+  }
+  paintChips();
+}
+
+async function loadFresh(){
+  if (nav) {
+    try {
+      const r = await navApi('getAlbumList2', { type: 'newest', size: 12 });
+      const al = (r.albumList2 && r.albumList2.album) || [];
+      $('#newMusicSec').classList.toggle('hidden', !al.length);
+      $('#newMusic').innerHTML = al.map(a => `<a class="card" href="${APPS.apollo}/#/album/${encodeURIComponent(a.id)}" target="_blank" rel="noopener">
+        <span class="cv"><img src="${navCover(a.coverArt || a.id, 300)}" alt="" onerror="this.remove()"></span><b>${esc(a.name)}</b><span class="m">${esc(a.artist || '')}</span></a>`).join('');
+    } catch {}
+  }
+  if (jfa) {
+    try {
+      const r = await jf('/Items', { params: { userId: jfa.userId, IncludeItemTypes: 'Movie,Series', Recursive: true, SortBy: 'DateCreated', SortOrder: 'Descending', Limit: 12 } });
+      const it = r.Items || [];
+      $('#newFilmSec').classList.toggle('hidden', !it.length);
+      $('#newFilm').innerHTML = it.map(x => `<a class="card" href="${APPS.theia}/#/item/${encodeURIComponent(x.Id)}" target="_blank" rel="noopener">
+        <span class="cv poster"><img src="${jfImg(x.Id, 'Primary', 300)}" alt="" onerror="this.remove()"></span><b>${esc(x.Name)}</b><span class="m">${esc(x.ProductionYear || (x.Type === 'Series' ? 'Series' : ''))}</span></a>`).join('');
+    } catch {}
+  }
+}
+
+/* ---------- quick actions ---------- */
+function paintChips(){
+  const r = resumeItems[0];
+  const chips = [
+    `<a class="chip" href="${APPS.apollo}/#/go/shuffle" target="_blank" rel="noopener">${icon('shuffle')}<span>Shuffle my music</span></a>`,
+    `<a class="chip" href="${APPS.apollo}/#/liked" target="_blank" rel="noopener">${icon('heart')}<span>Liked songs</span></a>`,
+    r ? `<a class="chip" href="${APPS.theia}/#/play/${encodeURIComponent(r.Id)}" target="_blank" rel="noopener">${icon('play')}<span>Resume ${esc(r.Type === 'Episode' ? r.SeriesName : r.Name)}</span></a>` : '',
+    `<a class="chip" href="${APPS.theia}/#/downloads" target="_blank" rel="noopener">${icon('dl')}<span>Film downloads</span></a>`,
+    `<a class="chip" href="${APPS.odysseus}/" target="_blank" rel="noopener">${icon('chat')}<span>Ask Odysseus</span></a>`,
+    `<button class="chip" id="scanBtn">${icon('scan')}<span>Scan for new media</span></button>`,
+  ];
+  $('#chips').innerHTML = chips.join('');
+  $('#scanBtn').onclick = async () => {
+    const done = [];
+    if (nav) { try { await navApi('startScan'); done.push('music'); } catch {} }
+    if (jfa) { try { await jf('/Library/Refresh', { method: 'POST' }); done.push('films'); } catch {} }
+    toast(done.length ? `Scanning ${done.join(' and ')} for anything new` : "Couldn't start a scan (needs an admin account)");
+  };
+}
+
+/* ---------- search across everything ---------- */
+let searchT, searchSeq = 0;
+$('#q').addEventListener('input', (e) => { clearTimeout(searchT); searchT = setTimeout(() => runSearch(e.target.value.trim()), 250); });
+$('#q').addEventListener('keydown', (e) => { if (e.key === 'Escape') { e.target.value = ''; $('#results').classList.add('hidden'); } });
+document.addEventListener('click', (e) => { if (!e.target.closest('.searchbox')) $('#results').classList.add('hidden'); });
+async function runSearch(q){
+  const box = $('#results');
+  if (!q) { box.classList.add('hidden'); return; }
+  const seq = ++searchSeq;
+  box.classList.remove('hidden'); box.innerHTML = '<div class="lbl">Searching…</div>';
+  const [m, f] = await Promise.all([
+    nav ? navApi('search3', { query: q, songCount: 6, albumCount: 6, artistCount: 4 }).then(r => r.searchResult3 || {}).catch(() => ({})) : {},
+    jfa ? jf('/Items', { params: { userId: jfa.userId, searchTerm: q, IncludeItemTypes: 'Movie,Series,Episode', Recursive: true, Limit: 10 } }).then(r => r.Items || []).catch(() => []) : [],
+  ]);
+  if (seq !== searchSeq) return;
+  const res = (href, th, title, sub, app, tall=false) => `<a class="res" href="${esc(href)}" target="_blank" rel="noopener"><span class="th ${tall ? 'tall' : ''}">${th ? `<img src="${esc(th)}" alt="" onerror="this.remove()">` : ''}</span><span class="tx"><b>${esc(title)}</b><span>${esc(sub)}</span></span><span class="app">${app}</span></a>`;
+  let html = '';
+  if ((m.artist || []).length) html += `<div class="lbl">Artists</div>` + m.artist.map(a => res(`${APPS.apollo}/#/artist/${encodeURIComponent(a.id)}`, navCover(a.coverArt || 'ar-' + a.id, 80), a.name, `${a.albumCount || 0} albums`, 'Apollo')).join('');
+  if ((m.album || []).length) html += `<div class="lbl">Albums</div>` + m.album.map(a => res(`${APPS.apollo}/#/album/${encodeURIComponent(a.id)}`, navCover(a.coverArt || a.id, 80), a.name, a.artist || '', 'Apollo')).join('');
+  if ((m.song || []).length) html += `<div class="lbl">Songs</div>` + m.song.map(s => res(`${APPS.apollo}/#/album/${encodeURIComponent(s.albumId)}`, navCover(s.coverArt, 80), s.title, `${s.artist || ''} · ${s.album || ''}`, 'Apollo')).join('');
+  const films = f.filter(x => x.Type !== 'Episode'), eps = f.filter(x => x.Type === 'Episode');
+  if (films.length) html += `<div class="lbl">Films &amp; shows</div>` + films.map(x => res(`${APPS.theia}/#/item/${encodeURIComponent(x.Id)}`, jfImg(x.Id, 'Primary', 80), x.Name, x.Type === 'Series' ? 'Series' : String(x.ProductionYear || 'Film'), 'Theia', true)).join('');
+  if (eps.length) html += `<div class="lbl">Episodes</div>` + eps.map(x => res(`${APPS.theia}/#/item/${encodeURIComponent(x.SeriesId || x.Id)}`, jfImg(x.Id, 'Primary', 120), x.Name, `${x.SeriesName || ''} · S${x.ParentIndexNumber}:E${x.IndexNumber}`, 'Theia')).join('');
+  box.innerHTML = html || `<div class="lbl" style="text-transform:none;letter-spacing:0;font-size:13px;padding:14px">Nothing found for “${esc(q)}”.</div>`;
+}
+
+/* ---------- run ---------- */
+let timers = [];
+function start(){
+  $('#login').classList.add('hidden'); $('#app').classList.remove('hidden');
+  tickClock(); loadStatus(); loadSystem(); loadLive(); loadFresh(); paintChips(); loadAlerts(); loadBackup(); loadBalances();
+  timers.forEach(clearInterval);
+  timers = [
+    setInterval(tickClock, 15000),
+    setInterval(() => { if (!document.hidden) loadStatus(); }, 20000),
+    setInterval(() => { if (!document.hidden) loadSystem(); }, 10000),
+    setInterval(() => { if (!document.hidden) loadLive(); }, 15000),
+    setInterval(() => { if (!document.hidden) loadFresh(); }, 300000),
+    setInterval(() => { if (!document.hidden) loadBackup(); }, 60000),
+  ];
+}
+document.addEventListener('visibilitychange', () => { if (!document.hidden && (nav || jfa)) { loadStatus(); loadLive(); loadSystem(); } });
+if ('serviceWorker' in navigator && window.isSecureContext) navigator.serviceWorker.register('/sw.js').catch(() => {});
+if (nav || jfa) start(); else { $('#login').classList.remove('hidden'); $('#nu').focus(); }
+})();
+</script>
+</body>
+</html>
