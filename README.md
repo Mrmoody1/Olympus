@@ -21,14 +21,14 @@ Olympus is the front door. Each app lives in its own repo and installs with one 
 | 💰 | **[Plutus](https://github.com/Mrmoody1/plutus)** | Budget, investments, Trading 212 sync | [Actual](https://actualbudget.org) + [Ghostfolio](https://ghostfol.io) | 5443 / 3443 |
 | 🛡 | **[Cerberus](https://github.com/Mrmoody1/cerberus)** | Password manager for the Bitwarden apps | [Vaultwarden](https://github.com/dani-garcia/vaultwarden) | 7443 |
 
-**Install everything** (pick and choose — each line is independent):
+**Install everything** (pick and choose — each line is independent). Needs the GitHub CLI signed in once: `sudo apt install gh && gh auth login`.
 
 ```bash
-curl -fsSL https://raw.githubusercontent.com/Mrmoody1/olympus/main/get.sh  | bash   # Olympus (+ backups in backup/)
-curl -fsSL https://raw.githubusercontent.com/Mrmoody1/apollo/main/get.sh   | bash   # music
-curl -fsSL https://raw.githubusercontent.com/Mrmoody1/theia/main/get.sh    | bash   # films & shows
-curl -fsSL https://raw.githubusercontent.com/Mrmoody1/plutus/main/get.sh   | bash   # money
-curl -fsSL https://raw.githubusercontent.com/Mrmoody1/cerberus/main/get.sh | bash   # passwords
+gh api repos/Mrmoody1/olympus/contents/get.sh -H "Accept: application/vnd.github.raw" | bash   # Olympus (+ backups in backup/)
+gh api repos/Mrmoody1/apollo/contents/get.sh -H "Accept: application/vnd.github.raw" | bash   # music
+gh api repos/Mrmoody1/theia/contents/get.sh -H "Accept: application/vnd.github.raw" | bash   # films & shows
+gh api repos/Mrmoody1/plutus/contents/get.sh -H "Accept: application/vnd.github.raw" | bash   # money
+gh api repos/Mrmoody1/cerberus/contents/get.sh -H "Accept: application/vnd.github.raw" | bash   # passwords
 ```
 
 **Rebuilding from scratch** (new PC or a dead one): install [Tailscale](https://tailscale.com) and Docker, run the lines above, then put your data back from the nightly backup — see [Backups](#backups-backup).
@@ -62,13 +62,20 @@ curl -fsSL https://raw.githubusercontent.com/Mrmoody1/cerberus/main/get.sh | bas
 
 On **Ubuntu, Debian or Linux Mint**:
 
+These repos are private, so installing needs the GitHub CLI signed in to your account, once per PC:
+
 ```bash
-curl -fsSL https://raw.githubusercontent.com/Mrmoody1/olympus/main/get.sh | bash
+sudo apt install gh && gh auth login
+```
+
+Then:
+
+```bash
+gh api repos/Mrmoody1/olympus/contents/get.sh -H "Accept: application/vnd.github.raw" | bash
 ```
 
 This downloads Olympus into `~/olympus` and sets it up to start with the computer, on port **8097** or the next free one. Open **http://localhost:8097** and sign in with your Navidrome or Jellyfin account.
 
-If the repo is private, use `git clone https://github.com/Mrmoody1/olympus ~/olympus && ~/olympus/install.sh` instead.
 
 ### Options
 
@@ -158,4 +165,4 @@ The Plutus balance screen saves to Ghostfolio through its API. It only accepts c
 
 ## Licence
 
-MIT. See [LICENSE](LICENSE).
+All rights reserved. Private, not open source. See [LICENSE](LICENSE).
