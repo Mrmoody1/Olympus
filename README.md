@@ -9,6 +9,30 @@ A dark, phone-friendly dashboard that sits in front of your self-hosted apps. It
 | --- |
 | <img src="docs/phone.png" width="300" alt="Olympus on a phone"> |
 
+## The Olympus home lab
+
+Olympus is the front door. Each app lives in its own repo and installs with one line. Install the ones you want; Olympus picks up whichever are running.
+
+| | App | What it does | Runs on | Phone port |
+| --- | --- | --- | --- | --- |
+| 🏛 | **Olympus** (this repo) | Home screen, status, alerts, nightly backups | Python | 9443 |
+| ☀️ | **[Apollo](https://github.com/Mrmoody1/apollo)** | Your own Spotify for the music you own | [Navidrome](https://www.navidrome.org) | 443 |
+| 👁 | **[Theia](https://github.com/Mrmoody1/theia)** | Films & shows, offline downloads, cast, watch together | [Jellyfin](https://jellyfin.org) | 8443 |
+| 💰 | **[Plutus](https://github.com/Mrmoody1/plutus)** | Budget, investments, Trading 212 sync | [Actual](https://actualbudget.org) + [Ghostfolio](https://ghostfol.io) | 5443 / 3443 |
+| 🛡 | **[Cerberus](https://github.com/Mrmoody1/cerberus)** | Password manager for the Bitwarden apps | [Vaultwarden](https://github.com/dani-garcia/vaultwarden) | 7443 |
+
+**Install everything** (pick and choose — each line is independent):
+
+```bash
+curl -fsSL https://raw.githubusercontent.com/Mrmoody1/olympus/main/get.sh  | bash   # Olympus (+ backups in backup/)
+curl -fsSL https://raw.githubusercontent.com/Mrmoody1/apollo/main/get.sh   | bash   # music
+curl -fsSL https://raw.githubusercontent.com/Mrmoody1/theia/main/get.sh    | bash   # films & shows
+curl -fsSL https://raw.githubusercontent.com/Mrmoody1/plutus/main/get.sh   | bash   # money
+curl -fsSL https://raw.githubusercontent.com/Mrmoody1/cerberus/main/get.sh | bash   # passwords
+```
+
+**Rebuilding from scratch** (new PC or a dead one): install [Tailscale](https://tailscale.com) and Docker, run the lines above, then put your data back from the nightly backup — see [Backups](#backups-backup).
+
 ## What's on it
 
 - **Three main tiles:** Odysseus (AI workspace), [Apollo](https://github.com/Mrmoody1/apollo) (music) and [Theia](https://github.com/Mrmoody1/theia) (films and shows), each with a live status light.
