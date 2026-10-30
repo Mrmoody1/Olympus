@@ -189,6 +189,8 @@ fieldset{border:1px solid var(--line-soft);border-radius:12px;padding:14px;displ
 legend{padding:0 6px;color:var(--muted);font-size:11px;letter-spacing:.1em;text-transform:uppercase}
 .check{display:flex;align-items:center;gap:10px;color:var(--soft);min-height:32px}
 .check input{width:18px;height:18px;accent-color:var(--accent)}
+.hint{margin:8px 2px 0;font-size:12px;line-height:1.5;color:var(--soft)}
+.hint b{color:var(--text,inherit);font-weight:600}
 .primary{height:46px;border-radius:999px;background:var(--accent);color:var(--accent-ink);font-weight:700}
 .primary:disabled{opacity:.6}
 .err{color:#f0a090;font-size:12px;min-height:16px;text-align:center;line-height:1.5}
@@ -243,15 +245,17 @@ footer button{color:var(--muted);text-decoration:underline}
 <div id="login" class="login hidden">
   <form id="loginForm">
     <div class="brand"><span data-icon="temple"></span>Olympus</div>
-    <p>Sign in once so Olympus can show what's playing and search your music and films.</p>
-    <fieldset><legend>Apollo · Navidrome</legend>
+    <p>Olympus has no login of its own. Sign in with your music and films accounts, and it remembers them on this device.</p>
+    <fieldset><legend>Music account (Navidrome)</legend>
       <label class="field">Username<input id="nu" autocomplete="username"></label>
       <label class="field">Password<input id="np" type="password" autocomplete="current-password"></label>
+      <p class="hint">The account from <b>http://localhost:4533</b> on the PC.</p>
     </fieldset>
-    <label class="check"><input type="checkbox" id="same" checked> Same login for Theia</label>
-    <fieldset id="jfSet" class="hidden"><legend>Theia · Jellyfin</legend>
+    <label class="check"><input type="checkbox" id="same" checked> My films account (Jellyfin) uses the same username and password</label>
+    <fieldset id="jfSet" class="hidden"><legend>Films account (Jellyfin)</legend>
       <label class="field">Username<input id="ju" autocomplete="off"></label>
       <label class="field">Password<input id="jp" type="password" autocomplete="off"></label>
+      <p class="hint">The account from <b>http://localhost:8096</b> on the PC.</p>
     </fieldset>
     <button class="primary" id="lbtn" type="submit">Enter Olympus</button>
     <div class="err" id="lerr" role="alert"></div>
@@ -484,15 +488,15 @@ $('#loginForm').addEventListener('submit', async (e) => {
     const r = await fetch('/nav/auth/login', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ username: nu, password: np }) });
     if (!r.ok) throw 0;
     const j = await r.json(); nav = { u: j.username || nu, s: j.subsonicSalt, t: j.subsonicToken, name: j.name || nu }; store.set('nav', nav);
-  } catch { problems.push('Apollo (Navidrome)'); }
+  } catch { problems.push('your music account (Navidrome)'); }
   try {
     const r = await fetch('/jf/Users/AuthenticateByName', { method: 'POST', headers: { 'Content-Type': 'application/json', Authorization: jfAuth() }, body: JSON.stringify({ Username: ju, Pw: jp }) });
     if (!r.ok) throw 0;
     const j = await r.json(); jfa = { token: j.AccessToken, userId: j.User.Id, name: j.User.Name }; store.set('jf', jfa);
-  } catch { problems.push('Theia (Jellyfin)'); }
+  } catch { problems.push('your films account (Jellyfin)'); }
   b.disabled = false;
-  if (problems.length === 2) { $('#lerr').textContent = "Neither login worked. Check the usernames and passwords."; return; }
-  if (problems.length) toast(`Signed in, but ${problems[0]} said no. Its panels will stay empty.`);
+  if (problems.length === 2) { $('#lerr').textContent = "Neither account worked. Use your Navidrome (music) and Jellyfin (films) logins, not your PC's."; return; }
+  if (problems.length) toast(`Signed in, but ${problems[0]} didn't accept those details, so its panels stay empty. Sign out and in again to retry.`);
   $('#np').value = ''; $('#jp').value = '';
   start();
 });
