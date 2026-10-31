@@ -8,8 +8,52 @@
   "background_color": "#1f1e1c",
   "theme_color": "#1f1e1c",
   "icons": [
-    { "src": "/icon-192.png", "sizes": "192x192", "type": "image/png" },
-    { "src": "/icon-512.png", "sizes": "512x512", "type": "image/png" },
-    { "src": "/icon-maskable.png", "sizes": "512x512", "type": "image/png", "purpose": "maskable" }
-  ]
+    {
+      "src": "/icon-192.png",
+      "sizes": "192x192",
+      "type": "image/png"
+    },
+    {
+      "src": "/icon-512.png",
+      "sizes": "512x512",
+      "type": "image/png"
+    },
+    {
+      "src": "/icon-maskable.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "maskable"
+    }
+  ],
+  "share_target": {
+    "action": "/share",
+    "method": "POST",
+    "enctype": "multipart/form-data",
+    "params": {
+      "files": [
+        {
+          "name": "media",
+          "accept": [
+            "video/*",
+            "audio/*",
+            ".mkv",
+            ".mp4",
+            ".m4v",
+            ".avi",
+            ".mov",
+            ".webm",
+            ".mp3",
+            ".flac",
+            ".m4a",
+            ".ogg",
+            ".opus",
+            ".wav",
+            ".srt",
+            ".vtt",
+            ".ass"
+          ]
+        }
+      ]
+    }
+  }
 }

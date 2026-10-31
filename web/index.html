@@ -112,6 +112,38 @@ button.fo{width:100%;text-align:left;font:inherit;color:var(--text)}
 .sheet .acts button{height:42px;padding:0 18px;border-radius:999px}
 .sheet .acts .ghost{border:1px solid var(--line);color:var(--soft)}
 .sheet .note{color:var(--muted);font-size:12px}
+.sheet.wide{width:min(620px,100%)}
+.sheet .x{position:absolute;top:14px;right:14px;width:34px;height:34px;border-radius:50%;color:var(--soft);display:inline-flex;align-items:center;justify-content:center}
+.sheet .x:hover{background:var(--hover);color:var(--text)}
+.sheet{position:relative}
+.sheet h4{margin:4px 0 -6px;font-size:12px;font-weight:500;letter-spacing:.08em;text-transform:uppercase;color:var(--muted)}
+.srow{display:flex;align-items:center;gap:12px;padding:10px 0;border-bottom:1px solid var(--line-soft)}
+.srow:last-child{border-bottom:0}
+.srow .t{flex:1;min-width:0;display:flex;flex-direction:column;gap:2px}
+.srow .t b{font-size:13px;font-weight:500;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.srow .t small{font-size:11px;color:var(--muted)}
+.srow button{flex:none;height:32px;padding:0 14px;border-radius:999px;border:1px solid var(--line);color:var(--soft);font-size:12px}
+.srow button:hover{border-color:var(--accent);color:var(--text)}
+.srow button.danger{border-color:#c0573f;color:#f0a08a}
+.srow button:disabled{opacity:.5;cursor:default}
+.slist{display:flex;flex-direction:column}
+.tabs{display:flex;gap:6px;flex-wrap:wrap}
+.tabs button{height:32px;padding:0 14px;border-radius:999px;border:1px solid var(--line);color:var(--soft);font-size:12px}
+.tabs button[aria-pressed="true"]{background:var(--accent);border-color:var(--accent);color:var(--accent-ink);font-weight:600}
+.tiles{display:grid;grid-template-columns:repeat(auto-fit,minmax(96px,1fr));gap:8px}
+.tiles div{padding:12px;border-radius:12px;background:var(--raised);border:1px solid var(--line-soft);display:flex;flex-direction:column;gap:4px}
+.tiles b{font-size:20px;font-weight:600}
+.tiles span{font-size:11px;color:var(--muted)}
+.tops{display:grid;grid-template-columns:repeat(auto-fit,minmax(240px,1fr));gap:4px 20px}
+.top5 h5{margin:6px 0 4px;font-size:12px;font-weight:500;color:var(--soft)}
+.top5 ol{margin:0;padding:0;list-style:none;counter-reset:n}
+.top5 li{counter-increment:n;display:flex;gap:10px;align-items:baseline;padding:5px 0;font-size:13px;border-bottom:1px solid var(--line-soft)}
+.top5 li::before{content:counter(n);width:14px;flex:none;color:var(--accent);font-weight:600;font-size:12px}
+.top5 li span{flex:1;min-width:0;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.top5 li small{flex:none;color:var(--muted);font-size:11px}
+.top5 .none{font-size:12px;color:var(--muted);padding:5px 0}
+#disk{cursor:pointer}
+#disk:hover .l span:first-child{color:var(--text)}
 .app-tile{position:relative;display:flex;flex-direction:column;gap:14px;padding:20px;border-radius:18px;background:var(--panel);border:1px solid var(--line);min-height:190px;overflow:hidden;transition:border-color .15s,transform .15s}
 .app-tile:hover{border-color:var(--accent);transform:translateY(-2px)}
 .app-tile .top{display:flex;align-items:center;justify-content:space-between;gap:10px}
@@ -373,6 +405,34 @@ footer button{color:var(--muted);text-decoration:underline}
   </form>
 </div>
 
+<div class="scrim hidden" id="storScrim">
+  <div class="sheet wide" id="storSheet" role="dialog" aria-modal="true" aria-labelledby="storTitle">
+    <button class="x" type="button" id="storClose" aria-label="Close"><span data-icon="close"></span></button>
+    <h2 id="storTitle">Storage</h2>
+    <p class="sub" id="storSub">Checking…</p>
+    <div class="meter" id="storDisk"></div>
+    <h4>Watched, so you could clear them out</h4>
+    <div class="slist" id="storWatched"><div class="note">Loading…</div></div>
+    <h4 id="storClearedH" class="hidden">Recently cleared</h4>
+    <div class="slist" id="storCleared"></div>
+    <p class="note">Clearing out moves a film or season to <b>Recently cleared</b>, so you can put it back. The space comes back when it's deleted: after 30 days, or straight away with <b>Delete now</b>.</p>
+  </div>
+</div>
+
+<div class="scrim hidden" id="statScrim">
+  <div class="sheet wide" id="statSheet" role="dialog" aria-modal="true" aria-labelledby="statTitle">
+    <button class="x" type="button" id="statClose" aria-label="Close"><span data-icon="close"></span></button>
+    <h2 id="statTitle">Your stats</h2>
+    <p class="sub" id="statSub">Music from Apollo, films and shows from Theia</p>
+    <div class="tabs" role="group" aria-label="Period">
+      <button type="button" data-p="month" aria-pressed="true">This month</button>
+      <button type="button" data-p="year" aria-pressed="false">This year</button>
+      <button type="button" data-p="all" aria-pressed="false">All time</button>
+    </div>
+    <div id="statBody"><div class="note">Adding it up…</div></div>
+  </div>
+</div>
+
 <div class="toast" id="toast" role="status"></div>
 
 <script>
@@ -389,6 +449,8 @@ const ICONS = {
   heart: P('<path d="M12 21s-7-4.5-9-9a5 5 0 0 1 9-3 5 5 0 0 1 9 3c-2 4.5-9 9-9 9z"/>'),
   play: P('<path d="M7 4l13 8-13 8z"/>'),
   dl: P('<path d="M12 4v11M7 10l5 5 5-5M5 20h14"/>'),
+  disk: P('<rect x="3" y="4" width="18" height="16" rx="2"/><path d="M3 14h18M7 17h.01"/>'),
+  close: P('<path d="M6 6l12 12M18 6L6 18"/>'),
   upload: P('<path d="M12 16V4M7 9l5-5 5 5M5 20h14"/>'),
   scan: P('<path d="M3 12a9 9 0 1 0 3-6.7L3 8M3 3v5h5"/>'),
   chat: P('<path d="M4 5h16v11H9l-5 4z"/>'),
@@ -708,6 +770,193 @@ async function loadFresh(){
   }
 }
 
+/* ---------- storage helper ---------- */
+const adminHeaders = () => nav ? { 'X-Nav-U': nav.u, 'X-Nav-T': nav.t, 'X-Nav-S': nav.s } : {};
+async function adminPost(path, body){
+  const r = await fetch(path, { method: 'POST', headers: { 'Content-Type': 'application/json', ...adminHeaders() }, body: JSON.stringify(body) });
+  if (r.status === 401) throw new Error('Only the Navidrome admin account can do this');
+  const j = await r.json(); if (!j.ok) throw new Error(j.error || 'That didn’t work'); return j;
+}
+const shortDate = (d) => new Date(d).toLocaleDateString('en-GB', { day: 'numeric', month: 'short' });
+function storRow(title, meta, buttons){
+  const row = document.createElement('div'); row.className = 'srow';
+  row.innerHTML = `<span class="t"><b title="${esc(title)}">${esc(title)}</b><small>${esc(meta)}</small></span>`;
+  for (const [label, fn, cls] of buttons) {
+    const b = document.createElement('button'); b.type = 'button'; b.textContent = label; if (cls) b.className = cls;
+    b.onclick = () => fn(b, row); row.appendChild(b);
+  }
+  return row;
+}
+async function paintStorageDisk(){
+  let s; try { s = await (await fetch('/api/system')).json(); } catch { return; }
+  const d = s.disk, f = s.folders || {};
+  const parts = [['Music', f.music, '#e0805f'], ['Films', f.movies, '#8fa8e0'], ['Shows', f.shows, '#7fb98a'], ['Inbox', f.inbox, '#d9b35b'], ['Recently cleared', f['.cleared'], '#a47fc9']].filter(p => p[1]);
+  const other = Math.max(0, d.used - parts.reduce((t, p) => t + p[1], 0));
+  $('#storSub').textContent = `${fmtBytes(d.free)} free of ${fmtBytes(d.total)}`;
+  $('#storDisk').innerHTML = `<div class="diskbar">${parts.map(p => `<span style="width:${p[1] / d.total * 100}%;background:${p[2]}"></span>`).join('')}<span style="width:${other / d.total * 100}%;background:#5a5754"></span></div>
+    <div class="legend">${parts.map(p => `<span><i style="background:${p[2]}"></i>${p[0]} ${fmtBytes(p[1])}</span>`).join('')}<span><i style="background:#5a5754"></i>Everything else ${fmtBytes(other)}</span></div>`;
+}
+async function paintCleared(){
+  let j; try { j = await (await fetch('/api/storage/cleared')).json(); } catch { return; }
+  const box = $('#storCleared'); box.innerHTML = '';
+  $('#storClearedH').classList.toggle('hidden', !j.items.length);
+  for (const it of j.items) {
+    box.appendChild(storRow(it.title, `${fmtBytes(it.size)} · deleted for good on ${shortDate(it.deleteOn * 1000)}`, [
+      ['Put back', async (b) => {
+        b.disabled = true;
+        try { await adminPost('/api/storage/restore', { id: it.id }); toast(`${it.title} is back`); refreshAfterStorage(); }
+        catch (e) { toast(e.message); b.disabled = false; }
+      }],
+      ['Delete now', async (b) => {
+        if (!b.dataset.sure) { b.dataset.sure = 1; b.textContent = 'Sure? Delete'; b.classList.add('danger'); setTimeout(() => { delete b.dataset.sure; b.textContent = 'Delete now'; b.classList.remove('danger'); }, 4000); return; }
+        b.disabled = true;
+        try { await adminPost('/api/storage/delete', { id: it.id }); toast(`Deleted. ${fmtBytes(it.size)} freed.`); refreshAfterStorage(); }
+        catch (e) { toast(e.message); b.disabled = false; }
+      }, ''],
+    ]));
+  }
+}
+async function paintWatched(){
+  const box = $('#storWatched');
+  if (!jfa) { box.innerHTML = '<div class="note">Sign in to Theia (Jellyfin) in Olympus to see what you’ve watched.</div>'; return; }
+  const candidates = [];
+  try {
+    const films = await jf(`/Users/${jfa.userId}/Items`, { params: { IncludeItemTypes: 'Movie', Recursive: true, IsPlayed: true, Fields: 'Path,MediaSources', Limit: 500 } });
+    for (const m of films.Items || []) {
+      const size = (m.MediaSources || []).reduce((t, x) => t + (x.Size || 0), 0);
+      candidates.push({ title: m.ProductionYear ? `${m.Name} (${m.ProductionYear})` : m.Name, kind: 'Film', size, when: m.UserData && m.UserData.LastPlayedDate, path: m.Path });
+    }
+    const eps = await jf(`/Users/${jfa.userId}/Items`, { params: { IncludeItemTypes: 'Episode', Recursive: true, Fields: 'Path,MediaSources', Limit: 20000 } });
+    const seasons = {};
+    for (const e of eps.Items || []) {
+      const k = `${e.SeriesName}\u0000${e.ParentIndexNumber ?? 0}`;
+      const s = seasons[k] ||= { title: `${e.SeriesName} · Season ${e.ParentIndexNumber ?? '?'}`, kind: 'Season', size: 0, all: true, when: null, path: e.Path };
+      s.size += (e.MediaSources || []).reduce((t, x) => t + (x.Size || 0), 0);
+      if (!(e.UserData && e.UserData.Played)) s.all = false;
+      const w = e.UserData && e.UserData.LastPlayedDate; if (w && (!s.when || w > s.when)) s.when = w;
+    }
+    candidates.push(...Object.values(seasons).filter(s => s.all));
+  } catch { box.innerHTML = '<div class="note">Couldn’t ask Theia what you’ve watched just now.</div>'; return; }
+  candidates.sort((a, b) => b.size - a.size);
+  box.innerHTML = '';
+  if (!candidates.length) { box.innerHTML = '<div class="note">Nothing you’ve finished yet. Films and fully watched seasons show up here.</div>'; return; }
+  for (const c of candidates.slice(0, 40)) {
+    box.appendChild(storRow(c.title, [c.kind, fmtBytes(c.size), c.when ? `watched ${shortDate(c.when)}` : (c.kind === 'Season' ? 'all watched' : 'watched')].join(' · '), [
+      ['Clear out', async (b, row) => {
+        b.disabled = true;
+        try { await adminPost('/api/storage/clear', { path: c.path, title: c.title }); toast(`${c.title} moved to Recently cleared`); row.remove(); refreshAfterStorage(); }
+        catch (e) { toast(e.message); b.disabled = false; }
+      }],
+    ]));
+  }
+}
+let storTimer;
+function refreshAfterStorage(){
+  paintCleared();
+  if (jfa) jf('/Library/Refresh', { method: 'POST' }).catch(() => {});
+  clearTimeout(storTimer); storTimer = setTimeout(() => { paintStorageDisk(); loadSystem(); }, 1500);
+}
+function openStorage(){
+  $('#storScrim').classList.remove('hidden');
+  paintStorageDisk(); paintCleared(); paintWatched();
+  $('#storClose').focus();
+}
+function closeStorage(){ $('#storScrim').classList.add('hidden'); }
+$('#storClose').addEventListener('click', closeStorage);
+$('#storScrim').addEventListener('click', (e) => { if (e.target.id === 'storScrim') closeStorage(); });
+document.addEventListener('keydown', (e) => { if (e.key === 'Escape' && !$('#storScrim').classList.contains('hidden')) closeStorage(); });
+$('#disk').addEventListener('click', openStorage);
+
+/* ---------- your stats ---------- */
+// Navidrome only keeps all-time play counts, so Olympus keeps one snapshot a month to work out "this month" / "this year".
+async function allSongs(){
+  const songs = [];
+  for (let off = 0; off < 100000; off += 500) {
+    const r = await navApi('search3', { query: '', songCount: 500, songOffset: off, artistCount: 0, albumCount: 0 });
+    const batch = (r.searchResult3 && r.searchResult3.song) || [];
+    songs.push(...batch);
+    if (batch.length < 500) break;
+  }
+  return songs;
+}
+async function snapshotIfNeeded(songs){
+  let bases; try { bases = await (await fetch('/api/stats/bases')).json(); } catch { return null; }
+  if (bases.needSnapshot && nav) {
+    songs = songs || await allSongs();
+    const counts = Object.fromEntries(songs.map(x => [x.id, x.playCount || 0]));
+    try { await adminPost('/api/stats/snapshot', { counts }); bases = await (await fetch('/api/stats/bases')).json(); } catch {}
+  }
+  return bases;
+}
+let statData = null, statPeriod = 'month';
+const hours = (h) => h >= 10 ? Math.round(h) : Math.round(h * 10) / 10;
+function top5(title, rows, unit){
+  const list = rows.slice(0, 5).map(([name, n]) => `<li><span title="${esc(name)}">${esc(name)}</span><small>${n} ${unit}${n === 1 ? '' : 's'}</small></li>`).join('');
+  return `<div class="top5"><h5>${esc(title)}</h5>${list ? `<ol>${list}</ol>` : '<div class="none">Nothing yet</div>'}</div>`;
+}
+function rank(map){ return Object.entries(map).filter(([, n]) => n > 0).sort((a, b) => b[1] - a[1]); }
+function paintStats(){
+  if (!statData) return;
+  const { songs, bases, films, eps } = statData;
+  const p = statPeriod;
+  const base = p === 'all' ? null : (bases && bases[p]);
+  const since = p === 'month' ? new Date(new Date().getFullYear(), new Date().getMonth(), 1) : p === 'year' ? new Date(new Date().getFullYear(), 0, 1) : new Date(0);
+  // Music: plays in the period = count now minus count in the snapshot
+  const artists = {}, tracks = {}, albums = {}; let plays = 0, secs = 0;
+  for (const x of songs) {
+    const n = (x.playCount || 0) - (base ? (base.counts[x.id] || 0) : 0);
+    if (n <= 0) continue;
+    plays += n; secs += n * (x.duration || 0);
+    artists[x.artist || 'Unknown'] = (artists[x.artist || 'Unknown'] || 0) + n;
+    tracks[`${x.title} · ${x.artist || ''}`] = n;
+    albums[`${x.album} · ${x.artist || ''}`] = (albums[`${x.album} · ${x.artist || ''}`] || 0) + n;
+  }
+  // Films and shows: finished in the period (Jellyfin knows when)
+  const inP = (it) => p === 'all' || (it.UserData && it.UserData.LastPlayedDate && new Date(it.UserData.LastPlayedDate) >= since);
+  const fW = films.filter(inP), eW = eps.filter(inP);
+  const watchH = [...fW, ...eW].reduce((t, it) => t + (it.RunTimeTicks || 0) / 36e9, 0);
+  const shows = {}; for (const e of eW) shows[e.SeriesName] = (shows[e.SeriesName] || 0) + 1;
+  let note = '';
+  if (p !== 'all' && nav && base && base.taken * 1000 > since.getTime() + 86400000)
+    note = `<p class="note">Music for this ${p} counts from ${shortDate(base.taken * 1000)}, when Olympus started keeping track.</p>`;
+  $('#statBody').innerHTML = `${note}
+    <div class="tiles">
+      <div><b>${plays}</b><span>songs played</span></div>
+      <div><b>${hours(secs / 3600)}</b><span>hours of music</span></div>
+      <div><b>${fW.length}</b><span>film${fW.length === 1 ? '' : 's'} watched</span></div>
+      <div><b>${eW.length}</b><span>episode${eW.length === 1 ? '' : 's'}</span></div>
+      <div><b>${hours(watchH)}</b><span>hours watching</span></div>
+    </div>
+    <div class="tops">
+      ${top5('Top artists', rank(artists), 'play')}
+      ${top5('Top songs', rank(tracks), 'play')}
+      ${top5('Top albums', rank(albums), 'play')}
+      ${top5('Top shows', rank(shows), 'episode')}
+    </div>
+    ${fW.length ? `<div class="top5"><h5>Films</h5><ol>${fW.sort((a, b) => (b.UserData.LastPlayedDate || '').localeCompare(a.UserData.LastPlayedDate || '')).slice(0, 8).map(f => `<li><span>${esc(f.Name)}${f.ProductionYear ? ` (${f.ProductionYear})` : ''}</span><small>${f.UserData.LastPlayedDate ? shortDate(f.UserData.LastPlayedDate) : ''}</small></li>`).join('')}</ol></div>` : ''}`;
+}
+async function openStats(){
+  $('#statScrim').classList.remove('hidden'); $('#statClose').focus();
+  $('#statBody').innerHTML = '<div class="note">Adding it up…</div>';
+  try {
+    const songs = nav ? await allSongs() : [];
+    const bases = await snapshotIfNeeded(songs);
+    const q = (type) => jfa ? jf(`/Users/${jfa.userId}/Items`, { params: { IncludeItemTypes: type, Recursive: true, IsPlayed: true, Fields: 'UserData', Limit: 20000 } }).then(r => r.Items || []).catch(() => []) : Promise.resolve([]);
+    const [films, eps] = await Promise.all([q('Movie'), q('Episode')]);
+    statData = { songs, bases, films, eps };
+    paintStats();
+  } catch { $('#statBody').innerHTML = '<div class="note">Couldn’t add it up just now. Try again in a minute.</div>'; }
+}
+function closeStats(){ $('#statScrim').classList.add('hidden'); }
+$('#statClose').addEventListener('click', closeStats);
+$('#statScrim').addEventListener('click', (e) => { if (e.target.id === 'statScrim') closeStats(); });
+document.addEventListener('keydown', (e) => { if (e.key === 'Escape' && !$('#statScrim').classList.contains('hidden')) closeStats(); });
+document.querySelectorAll('#statSheet .tabs button').forEach(b => b.addEventListener('click', () => {
+  statPeriod = b.dataset.p;
+  document.querySelectorAll('#statSheet .tabs button').forEach(x => x.setAttribute('aria-pressed', String(x === b)));
+  paintStats();
+}));
+
 /* ---------- quick actions ---------- */
 function paintChips(){
   const r = resumeItems[0];
@@ -718,8 +967,12 @@ function paintChips(){
     `<a class="chip" href="${APPS.theia}/#/downloads" target="_blank" rel="noopener">${icon('dl')}<span>Film downloads</span></a>`,
     `<a class="chip" href="${APPS.odysseus}/" target="_blank" rel="noopener">${icon('chat')}<span>Ask Odysseus</span></a>`,
     `<button class="chip" id="scanBtn">${icon('scan')}<span>Scan for new media</span></button>`,
+    `<button class="chip" id="statsBtn">${icon('chart')}<span>Your stats</span></button>`,
+    `<button class="chip" id="storageBtn">${icon('disk')}<span>Storage</span></button>`,
   ];
   $('#chips').innerHTML = chips.join('');
+  $('#storageBtn').onclick = openStorage;
+  $('#statsBtn').onclick = openStats;
   $('#scanBtn').onclick = async () => {
     const done = [];
     if (nav) { try { await navApi('startScan'); done.push('music'); } catch {} }
@@ -806,6 +1059,22 @@ function paintChips(){
     }
     show(rows); reset();
   }
+  // Files shared from another app on the phone ("Share → Olympus") arrive here via the service worker.
+  (async () => {
+    if (!new URLSearchParams(location.search).has('shared') || !('caches' in window)) return;
+    history.replaceState(null, '', '/');
+    const cache = await caches.open('olympus-shared'); const items = [];
+    for (const req of await cache.keys()) {
+      const r = await cache.match(req);
+      const name = decodeURIComponent(r.headers.get('X-Name') || 'shared');
+      items.push({ file: new File([await r.blob()], name, { type: r.headers.get('Content-Type') || '' }), path: name });
+    }
+    for (const req of await cache.keys()) await cache.delete(req);
+    if (!items.length) return;
+    box.scrollIntoView({ block: 'center', behavior: 'smooth' });
+    if (!nav) { show([['left', `Sign in to Olympus, then share ${items.length === 1 ? 'it' : 'them'} again.`]]); return; }
+    go(items);
+  })();
   box.addEventListener('click', () => { if (!busy) pick.click(); });
   box.addEventListener('keydown', (e) => { if ((e.key === 'Enter' || e.key === ' ') && !busy) { e.preventDefault(); pick.click(); } });
   pick.addEventListener('change', () => { go([...pick.files].map(f => ({ file: f, path: f.name }))); pick.value = ''; });
@@ -854,6 +1123,7 @@ let timers = [];
 function start(){
   $('#login').classList.add('hidden'); $('#app').classList.remove('hidden');
   tickClock(); loadStatus(); loadSystem(); loadLive(); loadFresh(); paintChips(); loadAlerts(); loadBackup(); loadBalances();
+  setTimeout(() => { if (nav) snapshotIfNeeded().catch(() => {}); }, 8000);
   timers.forEach(clearInterval);
   timers = [
     setInterval(tickClock, 15000),

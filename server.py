@@ -22,6 +22,7 @@ import glob
 import http.server
 import json
 import os
+import re
 import shutil
 import subprocess
 import threading
@@ -143,18 +144,23 @@ _sizes = {"at": 0, "v": {}}
 
 def folder_sizes_loop():
     while True:
-        sizes = {}
-        for sub in ("music", "movies", "shows"):
-            total = 0
-            for root, _, files in os.walk(os.path.join(MEDIA, sub)):
-                for f in files:
-                    try:
-                        total += os.lstat(os.path.join(root, f)).st_size
-                    except OSError:
-                        pass
-            sizes[sub] = total
-        _sizes["v"], _sizes["at"] = sizes, time.time()
+        compute_sizes()
         time.sleep(900)
+
+
+def compute_sizes():
+    sizes = {}
+    purge_cleared()
+    for sub in ("music", "movies", "shows", "inbox", ".cleared"):
+        total = 0
+        for root, _, files in os.walk(os.path.join(MEDIA, sub)):
+            for f in files:
+                try:
+                    total += os.lstat(os.path.join(root, f)).st_size
+                except OSError:
+                    pass
+        sizes[sub] = total
+    _sizes["v"], _sizes["at"] = sizes, time.time()
 
 
 def system():
@@ -376,6 +382,155 @@ def run_tidy():
     return lines
 
 
+# ---------- storage helper: "clear out" watched films, with 30 days to change your mind ----------
+CLEARED = os.path.join(MEDIA, ".cleared")
+CLEARED_INDEX = os.path.join(CLEARED, "index.json")
+KEEP_CLEARED_DAYS = 30
+_clear_lock = threading.Lock()
+
+
+def _cleared():
+    try:
+        with open(CLEARED_INDEX) as f:
+            return json.load(f)
+    except (OSError, ValueError):
+        return []
+
+
+def _save_cleared(items):
+    os.makedirs(CLEARED, exist_ok=True)
+    tmp = CLEARED_INDEX + ".tmp"
+    with open(tmp, "w") as f:
+        json.dump(items, f, indent=1)
+    os.replace(tmp, CLEARED_INDEX)
+
+
+def _size(path):
+    if os.path.isfile(path):
+        return os.path.getsize(path)
+    total = 0
+    for root, _, files in os.walk(path):
+        for f in files:
+            try: total += os.lstat(os.path.join(root, f)).st_size
+            except OSError: pass
+    return total
+
+
+def clear_target(item_path):
+    """Which folder to move for a film file or episode file Jellyfin reported. None if it's not safely ours."""
+    real = os.path.realpath(item_path or "")
+    movies, shows = os.path.realpath(os.path.join(MEDIA, "movies")), os.path.realpath(os.path.join(MEDIA, "shows"))
+    if not os.path.exists(real):
+        return None
+    VIDEO = (".mkv", ".mp4", ".m4v", ".avi", ".mov", ".webm", ".wmv", ".ts", ".mpg", ".mpeg")
+    folder = os.path.dirname(real)
+    if real.startswith(movies + os.sep):
+        if folder == movies:                       # a film sitting loose in movies/: just that file
+            return real
+        videos = [f for f in os.listdir(folder) if f.lower().endswith(VIDEO)]
+        return folder if len(videos) == 1 else real   # its own folder (with subtitles, posters) if it's alone in it
+    if real.startswith(shows + os.sep) and len(os.path.relpath(real, shows).split(os.sep)) == 3:
+        return folder                              # shows/<Show>/<Season xx>/<episode> -> that season's folder
+    return None
+
+
+def clear_out(item_path, title):
+    target = clear_target(item_path)
+    if not target:
+        raise ValueError("That isn't in your films or shows folders")
+    with _clear_lock:
+        items = _cleared()
+        cid = uuid.uuid4().hex[:12]
+        os.makedirs(CLEARED, exist_ok=True)
+        size = _size(target)
+        shutil.move(target, os.path.join(CLEARED, cid))
+        parent = os.path.dirname(target)                 # a show with no seasons left: remove its empty folder
+        if parent.startswith(os.path.realpath(os.path.join(MEDIA, "shows")) + os.sep) and not os.listdir(parent):
+            os.rmdir(parent)
+        items.append({"id": cid, "title": title or os.path.basename(target), "from": target, "size": size, "at": time.time()})
+        _save_cleared(items)
+    return {"id": cid, "size": size}
+
+
+def put_back(cid):
+    with _clear_lock:
+        items = _cleared()
+        it = next((i for i in items if i["id"] == cid), None)
+        if not it:
+            raise ValueError("Not found")
+        if os.path.exists(it["from"]):
+            raise ValueError("Something with that name is already back in its place")
+        os.makedirs(os.path.dirname(it["from"]), exist_ok=True)
+        shutil.move(os.path.join(CLEARED, cid), it["from"])
+        _save_cleared([i for i in items if i["id"] != cid])
+    return it
+
+
+def _remove(path):
+    if os.path.isdir(path) and not os.path.islink(path):
+        shutil.rmtree(path, ignore_errors=True)
+    elif os.path.lexists(path):
+        os.remove(path)
+
+
+def delete_now(cid):
+    with _clear_lock:
+        items = _cleared()
+        if not any(i["id"] == cid for i in items) or not re.fullmatch(r"[0-9a-f]{12}", cid):
+            raise ValueError("Not found")
+        _remove(os.path.join(CLEARED, cid))
+        _save_cleared([i for i in items if i["id"] != cid])
+
+
+def purge_cleared():
+    """Things cleared out more than 30 days ago are deleted for good."""
+    try:
+        with _clear_lock:
+            items = _cleared()
+            keep = [i for i in items if time.time() - i["at"] < KEEP_CLEARED_DAYS * 86400]
+            for i in items:
+                if i not in keep and re.fullmatch(r"[0-9a-f]{12}", i["id"]):
+                    _remove(os.path.join(CLEARED, i["id"]))
+            if len(keep) != len(items):
+                _save_cleared(keep)
+    except OSError:
+        pass
+
+
+# ---------- your stats: monthly snapshots of song play counts (Navidrome only keeps all-time totals) ----------
+STATS_DIR = os.path.expanduser("~/.config/olympus/stats")
+
+
+def stats_bases():
+    """The first play-count snapshot of this month and of this year (or the earliest we have)."""
+    month, year = time.strftime("%Y-%m"), time.strftime("%Y")
+    try:
+        files = sorted(f for f in os.listdir(STATS_DIR) if re.fullmatch(r"\d{4}-\d{2}\.json", f))
+    except OSError:
+        files = []
+
+    def load(name):
+        try:
+            with open(os.path.join(STATS_DIR, name)) as f:
+                return json.load(f)
+        except (OSError, ValueError):
+            return None
+    this_year = [f for f in files if f.startswith(year)]
+    return {"month": load(f"{month}.json"), "year": load(this_year[0]) if this_year else None,
+            "needSnapshot": f"{month}.json" not in files}
+
+
+def save_snapshot(counts):
+    os.makedirs(STATS_DIR, exist_ok=True)
+    name = os.path.join(STATS_DIR, time.strftime("%Y-%m") + ".json")
+    if os.path.exists(name):
+        return False
+    clean = {str(k)[:64]: int(v) for k, v in list(counts.items())[:200000] if isinstance(v, (int, float))}
+    with open(name, "w") as f:
+        json.dump({"taken": time.time(), "counts": clean}, f)
+    return True
+
+
 # ---------- web server ----------
 class Handler(http.server.SimpleHTTPRequestHandler):
     extensions_map = {**http.server.SimpleHTTPRequestHandler.extensions_map,
@@ -435,6 +590,12 @@ class Handler(http.server.SimpleHTTPRequestHandler):
                     return self._json(json.load(f))
             except (OSError, ValueError):
                 return self._json({"missing": True})
+        if self.path == "/api/storage/cleared":
+            items = sorted(_cleared(), key=lambda i: -i["at"])
+            return self._json({"items": [{**i, "from": os.path.relpath(i["from"], MEDIA),
+                                          "deleteOn": i["at"] + KEEP_CLEARED_DAYS * 86400} for i in items]})
+        if self.path == "/api/stats/bases":
+            return self._json(stats_bases())
         if self.path == "/api/alerts":
             return self._json({"topic": NTFY_TOPIC, "ok": _alerts["ok"], "last": _alerts["last"]})
         if self._backend():
@@ -459,6 +620,24 @@ class Handler(http.server.SimpleHTTPRequestHandler):
                 gf_call("POST", f"/api/v1/accounts/{body['id']}/balances",
                         {"balance": bal, "date": time.strftime("%Y-%m-%d")})
                 return self._json({"ok": True, "balance": bal})
+            except Exception as e:
+                return self._json({"ok": False, "error": str(e)[:200]})
+        if self.path in ("/api/storage/clear", "/api/storage/restore", "/api/storage/delete", "/api/stats/snapshot"):
+            if not self._drop_allowed():
+                return
+            if self.path.startswith("/api/storage/"):
+                threading.Timer(0.5, compute_sizes).start()      # so the storage bar is right straight away
+            try:
+                body = json.loads(self.rfile.read(int(self.headers.get("Content-Length") or 0)) or b"{}")
+                if self.path == "/api/storage/clear":
+                    return self._json({"ok": True, **clear_out(body.get("path"), str(body.get("title", ""))[:200])})
+                if self.path == "/api/storage/restore":
+                    it = put_back(str(body.get("id", "")))
+                    return self._json({"ok": True, "title": it["title"]})
+                if self.path == "/api/storage/delete":
+                    delete_now(str(body.get("id", "")))
+                    return self._json({"ok": True})
+                return self._json({"ok": True, "saved": save_snapshot(body.get("counts") or {})})
             except Exception as e:
                 return self._json({"ok": False, "error": str(e)[:200]})
         if self.path == "/api/inbox/file":
