@@ -53,17 +53,20 @@ SERVICES = {
     "aegis": os.environ.get("AEGIS_URL", "http://127.0.0.1:3080").rstrip("/") + "/",
     "athena": os.environ.get("ATHENA_URL", "http://127.0.0.1:8010").rstrip("/") + "/",
     "hermes": os.environ.get("HERMES_URL", "http://127.0.0.1:8081").rstrip("/") + "/status.php",
+    "hestia": os.environ.get("HESTIA_URL", "http://127.0.0.1:8123").rstrip("/") + "/manifest.json",
 }
 NTFY_URL = os.environ.get("NTFY_URL", "http://127.0.0.1:8091").rstrip("/")
 NTFY_TOPIC = os.environ.get("NTFY_TOPIC", "olympus")
 CERBERUS_TS_PORT = os.environ.get("CERBERUS_TS_PORT", "7443")
 AEGIS_CONF = os.path.expanduser(os.environ.get("AEGIS_CONF", "~/.config/olympus/aegis.json"))
+HESTIA_CONF = os.path.expanduser(os.environ.get("HESTIA_CONF", "~/.config/olympus/hestia.json"))
 
 
 def installed_services():
     """SERVICES, minus apps that aren't installed on this PC (Mnemosyne is optional)."""
     optional = {"mnemosyne": os.environ.get("MNEMOSYNE_DIR", "/opt/mnemosyne"), "clio": os.environ.get("CLIO_DIR", "/opt/clio"),
-                "athena": os.environ.get("ATHENA_DIR", "/opt/athena"), "hermes": os.environ.get("HERMES_DIR", "/opt/hermes")}
+                "athena": os.environ.get("ATHENA_DIR", "/opt/athena"), "hermes": os.environ.get("HERMES_DIR", "/opt/hermes"),
+                "hestia": os.environ.get("HESTIA_DIR", "/opt/hestia")}
     have = {k: os.path.exists(d + "/docker-compose.yml") for k, d in optional.items()}
     have["aegis"] = os.path.exists(AEGIS_CONF)
     return {k: u for k, u in SERVICES.items() if have.get(k, True)}
@@ -84,7 +87,7 @@ def ts_host():
 
 BACKUP_STATUS = os.environ.get("BACKUP_STATUS", "/var/lib/homelab-backup/status.json")
 NTFY_TOKEN = os.environ.get("NTFY_TOKEN", "")
-NICE = {"odysseus": "Odysseus", "apollo": "Apollo", "theia": "Theia", "cerberus": "Cerberus (passwords)", "budget": "Plutus budget", "investments": "Plutus investments", "navidrome": "Navidrome (music library)", "jellyfin": "Jellyfin (film library)", "mnemosyne": "Mnemosyne (photos)", "clio": "Clio (books)", "aegis": "Aegis (ad blocking)", "athena": "Athena (documents)", "hermes": "Hermes (drive)"}
+NICE = {"odysseus": "Odysseus", "apollo": "Apollo", "theia": "Theia", "cerberus": "Cerberus (passwords)", "budget": "Plutus budget", "investments": "Plutus investments", "navidrome": "Navidrome (music library)", "jellyfin": "Jellyfin (film library)", "mnemosyne": "Mnemosyne (photos)", "clio": "Clio (books)", "aegis": "Aegis (ad blocking)", "athena": "Athena (documents)", "hermes": "Hermes (drive)", "hestia": "Hestia (smart home)"}
 HOP_BY_HOP = {"connection", "keep-alive", "proxy-authenticate", "proxy-authorization",
               "te", "trailers", "transfer-encoding", "upgrade", "host"}
 
@@ -307,7 +310,7 @@ def watcher():
             fails[k] = 0 if up else fails[k] + 1
             if fails[k] == 2 and k not in down:          # two misses in a row = really down
                 down.add(k)
-                notify(f"{NICE[k]} is down", f"{NICE[k]} stopped answering. Try: sudo systemctl restart {k}" if k not in ("odysseus", "cerberus", "budget", "investments", "mnemosyne", "clio", "aegis", "athena", "hermes") else f"{NICE[k]} stopped answering. Try: docker ps", "warning", "high")
+                notify(f"{NICE[k]} is down", f"{NICE[k]} stopped answering. Try: sudo systemctl restart {k}" if k not in ("odysseus", "cerberus", "budget", "investments", "mnemosyne", "clio", "aegis", "athena", "hermes", "hestia") else f"{NICE[k]} stopped answering. Try: docker ps", "warning", "high")
             elif up and k in down:
                 down.discard(k)
                 notify(f"{NICE[k]} is back", f"{NICE[k]} is running again.", "white_check_mark")
@@ -559,6 +562,7 @@ ADDRESS_APPS = [  # key, name, what it is, local URL
     ("clio", "Clio", "Books & podcasts", os.environ.get("CLIO_URL", "http://127.0.0.1:13378")),
     ("athena", "Athena", "Documents", os.environ.get("ATHENA_URL", "http://127.0.0.1:8010")),
     ("hermes", "Hermes", "Your Drive", os.environ.get("HERMES_URL", "http://127.0.0.1:8081")),
+    ("hestia", "Hestia", "Smart home", os.environ.get("HESTIA_URL", "http://127.0.0.1:8123")),
     ("aegis", "Aegis", "Ad blocking (admin page)", os.environ.get("AEGIS_URL", "http://127.0.0.1:3080")),
     ("budget", "Plutus budget", "Budget", os.environ.get("BUDGET_URL", "http://127.0.0.1:5006")),
     ("investments", "Plutus investments", "Investments", os.environ.get("INVESTMENTS_URL", "http://127.0.0.1:3333")),
@@ -566,7 +570,7 @@ ADDRESS_APPS = [  # key, name, what it is, local URL
     ("jellyfin", "Jellyfin", "Film library admin (this PC)", BACKENDS["/jf/"]),
     ("ntfy", "ntfy", "Phone alerts server", NTFY_URL),
 ]
-TS_DEFAULTS = {"hermes": 7843, "athena": 8843, "aegis": 4553, "clio": 4443, "mnemosyne": 6443, "olympus": 9443, "apollo": 443, "theia": 8443, "odysseus": 10000, "cerberus": int(CERBERUS_TS_PORT),
+TS_DEFAULTS = {"hestia": 9123, "hermes": 7843, "athena": 8843, "aegis": 4553, "clio": 4443, "mnemosyne": 6443, "olympus": 9443, "apollo": 443, "theia": 8443, "odysseus": 10000, "cerberus": int(CERBERUS_TS_PORT),
                "budget": 5443, "investments": 3443}
 _addr = {"at": 0, "v": None}
 
@@ -602,7 +606,7 @@ def addresses():
     host, served = ts_host(), served_ports()
     rows = []
     for key, name, what, url in ADDRESS_APPS:
-        if key in ("mnemosyne", "clio", "aegis", "athena", "hermes") and key not in installed_services():
+        if key in ("mnemosyne", "clio", "aegis", "athena", "hermes", "hestia") and key not in installed_services():
             continue
         local_port = _port(url)
         ts_port = served.get(local_port) if served is not None else TS_DEFAULTS.get(key)
@@ -739,6 +743,42 @@ def setup_status():
             "backups": backups, "inbox": inbox}
 
 
+# ---------- Hestia: lights and plugs on the home screen ----------
+HESTIA_KINDS = ("light", "switch", "fan", "input_boolean")
+
+
+def hestia_call(method, path, body=None):
+    with open(HESTIA_CONF) as f:
+        c = json.load(f)
+    req = urllib.request.Request(c["url"].rstrip("/") + path, method=method,
+                                 data=json.dumps(body).encode() if body is not None else None,
+                                 headers={"Authorization": "Bearer " + c["token"], "Content-Type": "application/json"})
+    with urllib.request.urlopen(req, timeout=6) as r:
+        t = r.read()
+    try:
+        return json.loads(t)
+    except ValueError:
+        return {}
+
+
+def hestia_devices():
+    if not os.path.exists(HESTIA_CONF):
+        return {"connected": False}
+    try:
+        states = hestia_call("GET", "/api/states")
+    except Exception:
+        return {"connected": True, "up": False, "devices": []}
+    devices = []
+    for st in states:
+        eid = st.get("entity_id", ""); kind = eid.split(".")[0]
+        a = st.get("attributes") or {}
+        if kind not in HESTIA_KINDS or st.get("state") in ("unavailable", "unknown") or a.get("hidden"):
+            continue
+        devices.append({"id": eid, "kind": kind, "name": a.get("friendly_name") or eid, "on": st.get("state") == "on"})
+    devices.sort(key=lambda d: (d["kind"] != "light", d["name"].lower()))
+    return {"connected": True, "up": True, "devices": devices[:16]}
+
+
 # ---------- web server ----------
 class Handler(http.server.SimpleHTTPRequestHandler):
     extensions_map = {**http.server.SimpleHTTPRequestHandler.extensions_map,
@@ -811,6 +851,8 @@ class Handler(http.server.SimpleHTTPRequestHandler):
                                           "deleteOn": i["at"] + KEEP_CLEARED_DAYS * 86400} for i in items]})
         if self.path == "/api/aegis":
             return self._json(aegis_summary())
+        if self.path == "/api/hestia":
+            return self._json(hestia_devices())
         if self.path == "/api/addresses":
             return self._json(addresses())
         if self.path == "/api/stats/bases":
@@ -839,6 +881,18 @@ class Handler(http.server.SimpleHTTPRequestHandler):
                 gf_call("POST", f"/api/v1/accounts/{body['id']}/balances",
                         {"balance": bal, "date": time.strftime("%Y-%m-%d")})
                 return self._json({"ok": True, "balance": bal})
+            except Exception as e:
+                return self._json({"ok": False, "error": str(e)[:200]})
+        if self.path == "/api/hestia/toggle":
+            if not self._drop_allowed():
+                return
+            try:
+                body = json.loads(self.rfile.read(int(self.headers.get("Content-Length") or 0)) or b"{}")
+                eid = str(body.get("id", ""))
+                if not re.fullmatch(r"(light|switch|fan|input_boolean)\.[a-z0-9_]+", eid):
+                    raise ValueError("That isn't a light or switch")
+                hestia_call("POST", "/api/services/homeassistant/toggle", {"entity_id": eid})
+                return self._json({"ok": True})
             except Exception as e:
                 return self._json({"ok": False, "error": str(e)[:200]})
         if self.path == "/api/aegis/pause":

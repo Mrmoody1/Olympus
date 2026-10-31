@@ -228,6 +228,16 @@ button.fo{width:100%;text-align:left;font:inherit;color:var(--text)}
 .dmode{display:flex;gap:4px;align-self:flex-start;padding:3px;border-radius:999px;background:var(--raised);border:1px solid var(--line-soft)}
 .dmode button{height:24px;padding:0 12px;border-radius:999px;font-size:11px;color:var(--soft)}
 .dmode button[aria-pressed="true"]{background:var(--accent);color:var(--accent-ink);font-weight:600}
+.hgrid{display:grid;grid-template-columns:repeat(auto-fill,minmax(150px,1fr));gap:10px}
+.htile{display:flex;align-items:center;gap:10px;padding:12px;border-radius:14px;background:var(--panel);border:1px solid var(--line);text-align:left;color:var(--soft);transition:background .15s,border-color .15s}
+.htile:hover{border-color:var(--accent)}
+.htile .ic{flex:none;width:34px;height:34px;border-radius:10px;display:grid;place-items:center;background:var(--raised);color:var(--muted)}
+.htile .t{display:flex;flex-direction:column;min-width:0}
+.htile b{font-size:13px;font-weight:600;color:var(--text);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.htile small{font-size:11px;color:var(--muted)}
+.htile.on{background:rgba(224,128,95,.12);border-color:rgba(224,128,95,.5)}
+.htile.on .ic{background:var(--accent);color:var(--accent-ink)}
+.htile:disabled{opacity:.6}
 #disk{cursor:pointer}
 #disk:hover .l span:first-child{color:var(--text)}
 .app-tile{position:relative;display:flex;flex-direction:column;gap:14px;padding:20px;border-radius:18px;background:var(--panel);border:1px solid var(--line);min-height:190px;overflow:hidden;transition:border-color .15s,transform .15s}
@@ -462,6 +472,7 @@ footer button{color:var(--muted);text-decoration:underline}
       <a class="ex" id="t-mnemosyne" target="_blank" rel="noopener"><span class="dot"></span><span class="ic" data-icon="photo"></span><span class="nm">Mnemosyne</span><span class="tip">Mnemosyne<small class="st">Photos · checking…</small></span></a>
       <a class="ex" id="t-athena" target="_blank" rel="noopener"><span class="dot"></span><span class="ic" data-icon="doc"></span><span class="nm">Athena</span><span class="tip">Athena<small class="st">Documents · checking…</small></span></a>
       <a class="ex" id="t-hermes" target="_blank" rel="noopener"><span class="dot"></span><span class="ic" data-icon="cloud"></span><span class="nm">Hermes</span><span class="tip">Hermes<small class="st">Drive · checking…</small></span></a>
+      <a class="ex" id="t-hestia" target="_blank" rel="noopener"><span class="dot"></span><span class="ic" data-icon="house"></span><span class="nm">Hestia</span><span class="tip">Hestia<small class="st">Smart home · checking…</small></span></a>
       <a class="ex" id="t-aegis" target="_blank" rel="noopener"><span class="dot"></span><span class="ic" data-icon="aegis"></span><span class="nm">Aegis</span><span class="tip">Aegis<small class="st">Ad blocking · checking…</small></span></a>
       <a class="ex" id="t-clio" target="_blank" rel="noopener"><span class="dot"></span><span class="ic" data-icon="book"></span><span class="nm">Clio</span><span class="tip">Clio<small class="st">Books · checking…</small></span></a>
       <button class="ex settings" id="x-settings" type="button"><span class="ic" data-icon="gear"></span><span class="nm">Settings</span></button>
@@ -478,6 +489,7 @@ footer button{color:var(--muted);text-decoration:underline}
 
     <div class="cols">
       <div class="stack">
+        <section id="homeSec" class="hidden"><h3>Home <small>Hestia</small></h3><div class="hgrid" id="hgrid"></div></section>
         <section><h3>Playing now <small id="npWhen"></small></h3><div class="np" id="nowPlaying"><div class="empty">Checking…</div></div></section>
         <section id="cwSec" class="hidden"><h3>Continue watching</h3><div class="row wide" id="cw"></div></section>
         <section id="newMusicSec" class="hidden"><h3>New in Apollo</h3><div class="row" id="newMusic"></div></section>
@@ -612,6 +624,9 @@ const ICONS = {
   play: P('<path d="M7 4l13 8-13 8z"/>'),
   dl: P('<path d="M12 4v11M7 10l5 5 5-5M5 20h14"/>'),
   gear: P('<circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.7 1.7 0 0 0 .3 1.8l.1.1a2 2 0 1 1-2.8 2.8l-.1-.1a1.7 1.7 0 0 0-1.8-.3 1.7 1.7 0 0 0-1 1.5V21a2 2 0 1 1-4 0v-.1a1.7 1.7 0 0 0-1.1-1.5 1.7 1.7 0 0 0-1.8.3l-.1.1a2 2 0 1 1-2.8-2.8l.1-.1a1.7 1.7 0 0 0 .3-1.8 1.7 1.7 0 0 0-1.5-1H3a2 2 0 1 1 0-4h.1a1.7 1.7 0 0 0 1.5-1.1 1.7 1.7 0 0 0-.3-1.8l-.1-.1a2 2 0 1 1 2.8-2.8l.1.1a1.7 1.7 0 0 0 1.8.3H9a1.7 1.7 0 0 0 1-1.5V3a2 2 0 1 1 4 0v.1a1.7 1.7 0 0 0 1 1.5 1.7 1.7 0 0 0 1.8-.3l.1-.1a2 2 0 1 1 2.8 2.8l-.1.1a1.7 1.7 0 0 0-.3 1.8V9a1.7 1.7 0 0 0 1.5 1H21a2 2 0 1 1 0 4h-.1a1.7 1.7 0 0 0-1.5 1z"/>'),
+  house: P('<path d="M3 11l9-7 9 7v9a1 1 0 0 1-1 1h-5v-6H9v6H4a1 1 0 0 1-1-1z"/>'),
+  bulb: P('<path d="M9 18h6M10 21h4M12 3a6 6 0 0 0-3.5 10.9c.6.5 1 1.2 1 2.1h5c0-.9.4-1.6 1-2.1A6 6 0 0 0 12 3z"/>'),
+  plug: P('<path d="M9 2v6M15 2v6M6 8h12v3a6 6 0 0 1-12 0zM12 17v5"/>'),
   cloud: P('<path d="M7 18a4.5 4.5 0 0 1-.6-8.96A6 6 0 0 1 18 9a4.5 4.5 0 0 1-.5 9z"/>'),
   doc: P('<path d="M7 3h7l5 5v13H7z"/><path d="M14 3v5h5M10 13h6M10 17h6"/>'),
   aegis: P('<circle cx="12" cy="12" r="9"/><circle cx="12" cy="12" r="5"/><path d="M12 3v4M12 17v4M3 12h4M17 12h4"/>'),
@@ -665,6 +680,7 @@ const APPS = {
   aegis: viaTailscale ? `https://${host}:4553` : `http://${host}:3080`,
   athena: viaTailscale ? `https://${host}:8843` : `http://${host}:8010`,
   hermes: viaTailscale ? `https://${host}:7843` : `http://${host}:8081`,
+  hestia: viaTailscale ? `https://${host}:9123` : `http://${host}:8123`,
 };
 $('#where').textContent = viaTailscale ? 'via Tailscale' : 'on this PC';
 for (const k of Object.keys(APPS)) $('#t-' + k).href = APPS[k] + '/';
@@ -786,7 +802,7 @@ function tickClock(){
 }
 
 /* ---------- status ---------- */
-const SVC_NAMES = { odysseus: 'Odysseus', apollo: 'Apollo', theia: 'Theia', cerberus: 'Cerberus', budget: 'Plutus · budget', investments: 'Plutus · investments', mnemosyne: 'Mnemosyne · photos', clio: 'Clio · books', athena: 'Athena · documents', hermes: 'Hermes · drive', aegis: 'Aegis · ad blocking', navidrome: 'Navidrome · music library', jellyfin: 'Jellyfin · film library' };
+const SVC_NAMES = { odysseus: 'Odysseus', apollo: 'Apollo', theia: 'Theia', cerberus: 'Cerberus', budget: 'Plutus · budget', investments: 'Plutus · investments', mnemosyne: 'Mnemosyne · photos', clio: 'Clio · books', athena: 'Athena · documents', hermes: 'Hermes · drive', hestia: 'Hestia · smart home', aegis: 'Aegis · ad blocking', navidrome: 'Navidrome · music library', jellyfin: 'Jellyfin · film library' };
 async function loadStatus(){
   let s;
   try { s = await (await fetch('/api/status')).json(); } catch { return; }
@@ -797,7 +813,7 @@ async function loadStatus(){
     $('#t-investments .dot').className = 'dot ' + (i ? 'up' : 'down');
   }
   if (window.olympusDropModes) window.olympusDropModes(!!s.athena);
-  for (const [k, what] of [['cerberus', 'Passwords'], ['mnemosyne', 'Photos'], ['clio', 'Books'], ['athena', 'Documents'], ['hermes', 'Drive'], ['aegis', 'Ad blocking']]) {
+  for (const [k, what] of [['cerberus', 'Passwords'], ['mnemosyne', 'Photos'], ['clio', 'Books'], ['athena', 'Documents'], ['hermes', 'Drive'], ['hestia', 'Smart home'], ['aegis', 'Ad blocking']]) {
     const t = $('#t-' + k); const up = s[k] && s[k].up;
     if (k !== 'cerberus' && !s[k]) { t.classList.add('hidden'); continue; }   // not installed (yet)
     t.classList.remove('hidden');
@@ -810,10 +826,25 @@ async function loadStatus(){
     t.querySelector('.dot').className = 'dot ' + (up ? 'up' : 'down');
     t.querySelector('.st').textContent = up ? 'Running' : (s[k] && s[k].up ? `${k === 'apollo' ? 'Navidrome' : 'Jellyfin'} is down` : 'Not running');
   }
-  $('#svc').innerHTML = Object.entries(SVC_NAMES).filter(([k]) => !['mnemosyne', 'clio', 'aegis', 'athena', 'hermes'].includes(k) || s[k]).map(([k, n]) => `<div><span class="dot ${s[k] && s[k].up ? 'up' : 'down'}"></span><span class="n">${esc(n)}</span><span class="ms">${s[k] && s[k].up ? s[k].ms + ' ms' : 'down'}</span></div>`).join('');
+  $('#svc').innerHTML = Object.entries(SVC_NAMES).filter(([k]) => !['mnemosyne', 'clio', 'aegis', 'athena', 'hermes', 'hestia'].includes(k) || s[k]).map(([k, n]) => `<div><span class="dot ${s[k] && s[k].up ? 'up' : 'down'}"></span><span class="n">${esc(n)}</span><span class="ms">${s[k] && s[k].up ? s[k].ms + ' ms' : 'down'}</span></div>`).join('');
 }
 
 /* ---------- the PC ---------- */
+async function loadHome(){
+  let h; try { h = await (await fetch('/api/hestia')).json(); } catch { return; }
+  const sec = $('#homeSec');
+  if (!h.connected || !h.devices || !h.devices.length) { sec.classList.add('hidden'); return; }
+  sec.classList.remove('hidden');
+  $('#hgrid').innerHTML = h.devices.map(d => `<button type="button" class="htile ${d.on ? 'on' : ''}" data-id="${esc(d.id)}" aria-pressed="${d.on}">
+      <span class="ic">${icon(d.kind === 'light' ? 'bulb' : 'plug')}</span><span class="t"><b>${esc(d.name)}</b><small>${d.on ? 'On' : 'Off'}</small></span></button>`).join('');
+  $('#hgrid').querySelectorAll('.htile').forEach(b => b.addEventListener('click', async () => {
+    b.disabled = true; const was = b.classList.contains('on');
+    b.classList.toggle('on', !was); b.querySelector('small').textContent = was ? 'Off' : 'On';     // feels instant
+    try { await adminPost('/api/hestia/toggle', { id: b.dataset.id }); }
+    catch (e) { toast(e.message); b.classList.toggle('on', was); b.querySelector('small').textContent = was ? 'On' : 'Off'; }
+    b.disabled = false; setTimeout(loadHome, 1500);
+  }));
+}
 async function loadAegis(){
   let a; try { a = await (await fetch('/api/aegis')).json(); } catch { return; }
   const row = $('#aegisRow'); row.classList.toggle('hidden', !a.installed);
@@ -1187,6 +1218,7 @@ const PHONE_HOW = {
   aegis: 'Its admin page. Blocking itself starts once Tailscale DNS points to Aegis',
   athena: 'Open it, then ⋮ → Add to Home screen. Upload photos of letters from there',
   hermes: 'Use the Nextcloud app, with this as the server address',
+  hestia: 'Use the Home Assistant app, with this as the server address',
 };
 let setData = null;
 function qrSvg(text){
@@ -1623,7 +1655,7 @@ async function runSearch(q){
 let timers = [];
 function start(){
   $('#login').classList.add('hidden'); $('#app').classList.remove('hidden');
-  tickClock(); loadStatus(); loadSystem(); loadLive(); loadFresh(); paintChips(); loadAlerts(); loadBackup(); loadBalances(); loadAegis();
+  tickClock(); loadStatus(); loadSystem(); loadLive(); loadFresh(); paintChips(); loadAlerts(); loadBackup(); loadBalances(); loadAegis(); loadHome();
   setTimeout(() => { if (nav) snapshotIfNeeded().catch(() => {}); }, 8000);
   paintGetStarted();
   let seen = false; try { seen = !!store.get('tourSeen'); } catch {}
@@ -1637,6 +1669,7 @@ function start(){
     setInterval(() => { if (!document.hidden) loadFresh(); }, 300000),
     setInterval(() => { if (!document.hidden) loadBackup(); }, 60000),
     setInterval(() => { if (!document.hidden) loadAegis(); }, 30000),
+    setInterval(() => { if (!document.hidden) loadHome(); }, 15000),
   ];
 }
 document.addEventListener('visibilitychange', () => { if (!document.hidden && (nav || jfa)) { loadStatus(); loadLive(); loadSystem(); } });

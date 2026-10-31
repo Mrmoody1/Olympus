@@ -126,7 +126,8 @@ paths(){
            "$HOME_DIR/clio" /opt/clio/config /opt/clio/metadata /opt/clio/docker-compose.yml \
            "$HOME_DIR/aegis" /opt/AdGuardHome/AdGuardHome.yaml \
            "$HOME_DIR/athena" /opt/athena/backup /opt/athena/data /opt/athena/.env /opt/athena/paperless.env /opt/athena/docker-compose.yml \
-           "$HOME_DIR/hermes" /opt/hermes/backup /opt/hermes/html/config /opt/hermes/.env /opt/hermes/docker-compose.yml; do
+           "$HOME_DIR/hermes" /opt/hermes/backup /opt/hermes/html/config /opt/hermes/.env /opt/hermes/docker-compose.yml \
+           "$HOME_DIR/hestia" /opt/hestia/config /opt/hestia/docker-compose.yml; do
     [ -e "$p" ] && echo "$p"
   done; }
 excludes(){
@@ -138,6 +139,7 @@ excludes(){
   echo "--exclude=/opt/clio/metadata/cache"; echo "--exclude=/opt/clio/metadata/logs"   # Clio remakes these
   echo "--exclude=/opt/athena/data/log"
   echo "--exclude=/srv/media/drive/appdata_*/preview"   # Hermes remakes its previews
+  echo "--exclude=/opt/hestia/config/home-assistant_v2.db*"; echo "--exclude=/opt/hestia/config/*.log*"
   echo "--exclude=/srv/media/.cleared"                  # cleared-out films: on their way to being deleted
   if [ "$1" = koofr ]; then echo "--exclude=/srv/media/movies"; echo "--exclude=/srv/media/shows"; echo "--exclude=/srv/media/inbox"; echo "--exclude=/srv/media/books/audiobooks"; echo "--exclude=/srv/media/books/podcasts"; fi; }
 
