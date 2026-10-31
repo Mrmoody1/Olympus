@@ -793,6 +793,7 @@ function paintChips(){
       for (const l of j.lines || []) {
         if (l.startsWith('✓ Filed ')) rows.push(['ok', '✓ ' + nice(l.slice(8))]);
         else if (l.startsWith('· Left in inbox: ')) rows.push(['left', '· ' + l.slice(17)]);
+        else if (l.startsWith('· Recognised ')) rows.push(['ok', '♪ ' + l.slice(2)]);
       }
     } catch { rows.push(['left', "Couldn't file them just now. They'll be filed within 5 minutes."]); }
     if (skipped.length) rows.push(['left', skipped.length === 1 ? `· Skipped ${skipped[0].file.name}: not a film or music` : `· Skipped ${skipped.length} files that aren't films or music`]);
