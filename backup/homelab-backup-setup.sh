@@ -120,14 +120,19 @@ paths(){
   for p in /srv/media "$SNAP" /etc/jellyfin /etc/navidrome "$HOME_DIR/odysseus" \
            "$HOME_DIR/apollo" "$HOME_DIR/theia" "$HOME_DIR/olympus" \
            /etc/systemd/system/apollo.service /etc/systemd/system/theia.service \
-           /etc/systemd/system/olympus.service /etc/fstab; do
+           /etc/systemd/system/olympus.service /etc/fstab \
+           "$HOME_DIR/.config/olympus" "$HOME_DIR/.config/apollo" "$HOME_DIR/.config/theia" \
+           "$HOME_DIR/mnemosyne" /opt/mnemosyne/.env /opt/mnemosyne/docker-compose.yml; do
     [ -e "$p" ] && echo "$p"
   done; }
 excludes(){
   echo "--exclude=$HOME_DIR/odysseus/data"
   echo "--exclude=$HOME_DIR/odysseus/logs"
   echo "--exclude=**/transcodes"
-  if [ "$1" = koofr ]; then echo "--exclude=/srv/media/movies"; echo "--exclude=/srv/media/shows"; fi; }
+  echo "--exclude=/srv/media/photos/thumbs"            # Mnemosyne remakes these itself
+  echo "--exclude=/srv/media/photos/encoded-video"
+  echo "--exclude=/srv/media/.cleared"                  # cleared-out films: on their way to being deleted
+  if [ "$1" = koofr ]; then echo "--exclude=/srv/media/movies"; echo "--exclude=/srv/media/shows"; echo "--exclude=/srv/media/inbox"; fi; }
 
 human(){ numfmt --to=iec --suffix=B "${1:-0}" 2>/dev/null || echo "${1}B"; }
 
@@ -182,6 +187,11 @@ check(){
   return $bad
 }
 
+# ---- for Olympus's Restore sheet: browse and restore, limited to your media and home folders ----
+allowed(){ local p; p=$(realpath -m -- "$1"); case "$p" in /srv/media|/srv/media/*|"$HOME_DIR"|"$HOME_DIR"/*) return 0 ;; *) return 1 ;; esac; }
+repo_of(){ case "$1" in hdd) echo "$HDD_REPO" ;; koofr) [ "$KOOFR_ENABLED" = 1 ] && echo "$KOOFR_REPO" ;; esac; }
+valid_snap(){ [[ "$1" =~ ^[0-9a-f]{8,64}$ || "$1" = latest ]]; }
+
 testrestore(){
   local bad=0
   while read -r name repo; do
@@ -207,6 +217,27 @@ case "${1:-backup}" in
     "$R" -r "$repo" restore "$snap" --host homelab --target /tmp/restore --include "$what"
     chown -R "$(stat -c %U "$HOME_DIR")": /tmp/restore
     echo "Restored into /tmp/restore$what — copy back what you need." ;;
+  snapshots-json)
+    while read -r name repo; do
+      printf '{"place":"%s","snapshots":%s}\n' "$name" "$("$R" -r "$repo" snapshots --json --host homelab 2>/dev/null || echo '[]')"
+    done < <(repos) | python3 -c 'import sys,json; print(json.dumps([json.loads(l) for l in sys.stdin if l.strip()]))' ;;
+  ls-json)
+    repo=$(repo_of "${2:-}"); snap=${3:-}; what=$(realpath -m -- "${4:-/}")
+    [ -n "$repo" ] && valid_snap "$snap" && allowed "$what" || { echo '{"error":"not allowed"}'; exit 2; }
+    "$R" -r "$repo" ls --json "$snap" "$what" ;;
+  restore-to)
+    repo=$(repo_of "${2:-}"); snap=${3:-}; what=$(realpath -m -- "${4:-/}")
+    [ -n "$repo" ] && valid_snap "$snap" && allowed "$what" || { echo '{"error":"not allowed"}'; exit 2; }
+    me=$(stat -c %U "$HOME_DIR"); dest="$HOME_DIR/Restored/$(date +%Y-%m-%d)"
+    tmp=$(mktemp -d /var/tmp/olympus-restore.XXXXXX)
+    if ! "$R" -r "$repo" restore "$snap" --host homelab --target "$tmp" --include "$what" >/dev/null 2>&1 || [ ! -e "$tmp$what" ]; then
+      rm -rf "$tmp"; echo '{"error":"restore failed"}'; exit 1
+    fi
+    mkdir -p "$dest"; name=$(basename "$what"); out="$dest/$name"; n=2
+    while [ -e "$out" ]; do out="$dest/$name ($n)"; n=$((n + 1)); done     # never overwrite
+    mv "$tmp$what" "$out"; rm -rf "$tmp"
+    chown -R "$me": "$HOME_DIR/Restored"
+    python3 -c 'import json,sys; print(json.dumps({"to": sys.argv[1]}))' "$out" ;;
   *) sed -n '2,7p' "$0" ;;
 esac
 RUNNER

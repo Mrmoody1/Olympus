@@ -48,10 +48,17 @@ SERVICES = {
     "investments": os.environ.get("INVESTMENTS_URL", "http://127.0.0.1:3333").rstrip("/") + "/api/v1/health",
     "navidrome": BACKENDS["/nav/"] + "/ping",
     "jellyfin": BACKENDS["/jf/"] + "/System/Info/Public",
+    "mnemosyne": os.environ.get("MNEMOSYNE_URL", "http://127.0.0.1:2283").rstrip("/") + "/api/server/ping",
 }
 NTFY_URL = os.environ.get("NTFY_URL", "http://127.0.0.1:8091").rstrip("/")
 NTFY_TOPIC = os.environ.get("NTFY_TOPIC", "olympus")
 CERBERUS_TS_PORT = os.environ.get("CERBERUS_TS_PORT", "7443")
+
+
+def installed_services():
+    """SERVICES, minus apps that aren't installed on this PC (Mnemosyne is optional)."""
+    return {k: u for k, u in SERVICES.items()
+            if k != "mnemosyne" or os.path.exists(os.environ.get("MNEMOSYNE_DIR", "/opt/mnemosyne") + "/docker-compose.yml")}
 _ts_host = {"name": None, "at": 0}
 
 
@@ -69,7 +76,7 @@ def ts_host():
 
 BACKUP_STATUS = os.environ.get("BACKUP_STATUS", "/var/lib/homelab-backup/status.json")
 NTFY_TOKEN = os.environ.get("NTFY_TOKEN", "")
-NICE = {"odysseus": "Odysseus", "apollo": "Apollo", "theia": "Theia", "cerberus": "Cerberus (passwords)", "budget": "Plutus budget", "investments": "Plutus investments", "navidrome": "Navidrome (music library)", "jellyfin": "Jellyfin (film library)"}
+NICE = {"odysseus": "Odysseus", "apollo": "Apollo", "theia": "Theia", "cerberus": "Cerberus (passwords)", "budget": "Plutus budget", "investments": "Plutus investments", "navidrome": "Navidrome (music library)", "jellyfin": "Jellyfin (film library)", "mnemosyne": "Mnemosyne (photos)"}
 HOP_BY_HOP = {"connection", "keep-alive", "proxy-authenticate", "proxy-authorization",
               "te", "trailers", "transfer-encoding", "upgrade", "host"}
 
@@ -151,7 +158,7 @@ def folder_sizes_loop():
 def compute_sizes():
     sizes = {}
     purge_cleared()
-    for sub in ("music", "movies", "shows", "inbox", ".cleared"):
+    for sub in ("music", "movies", "shows", "photos", "inbox", ".cleared"):
         total = 0
         for root, _, files in os.walk(os.path.join(MEDIA, sub)):
             for f in files:
@@ -287,12 +294,12 @@ def watcher():
             plutus_reminder(reminded)
         except Exception:
             pass
-        for k, url in SERVICES.items():
+        for k, url in installed_services().items():
             up = check(url)["up"]
             fails[k] = 0 if up else fails[k] + 1
             if fails[k] == 2 and k not in down:          # two misses in a row = really down
                 down.add(k)
-                notify(f"{NICE[k]} is down", f"{NICE[k]} stopped answering. Try: sudo systemctl restart {k}" if k not in ("odysseus", "cerberus", "budget", "investments") else f"{NICE[k]} stopped answering. Try: docker ps", "warning", "high")
+                notify(f"{NICE[k]} is down", f"{NICE[k]} stopped answering. Try: sudo systemctl restart {k}" if k not in ("odysseus", "cerberus", "budget", "investments", "mnemosyne") else f"{NICE[k]} stopped answering. Try: docker ps", "warning", "high")
             elif up and k in down:
                 down.discard(k)
                 notify(f"{NICE[k]} is back", f"{NICE[k]} is running again.", "white_check_mark")
@@ -538,13 +545,14 @@ ADDRESS_APPS = [  # key, name, what it is, local URL
     ("theia", "Theia", "Films & shows", SERVICES["theia"]),
     ("odysseus", "Odysseus", "AI workspace", SERVICES["odysseus"]),
     ("cerberus", "Cerberus", "Passwords", os.environ.get("CERBERUS_URL", "http://127.0.0.1:8222")),
+    ("mnemosyne", "Mnemosyne", "Photos", os.environ.get("MNEMOSYNE_URL", "http://127.0.0.1:2283")),
     ("budget", "Plutus budget", "Budget", os.environ.get("BUDGET_URL", "http://127.0.0.1:5006")),
     ("investments", "Plutus investments", "Investments", os.environ.get("INVESTMENTS_URL", "http://127.0.0.1:3333")),
     ("navidrome", "Navidrome", "Music library admin (this PC)", BACKENDS["/nav/"]),
     ("jellyfin", "Jellyfin", "Film library admin (this PC)", BACKENDS["/jf/"]),
     ("ntfy", "ntfy", "Phone alerts server", NTFY_URL),
 ]
-TS_DEFAULTS = {"olympus": 9443, "apollo": 443, "theia": 8443, "odysseus": 10000, "cerberus": int(CERBERUS_TS_PORT),
+TS_DEFAULTS = {"mnemosyne": 6443, "olympus": 9443, "apollo": 443, "theia": 8443, "odysseus": 10000, "cerberus": int(CERBERUS_TS_PORT),
                "budget": 5443, "investments": 3443}
 _addr = {"at": 0, "v": None}
 
@@ -580,12 +588,68 @@ def addresses():
     host, served = ts_host(), served_ports()
     rows = []
     for key, name, what, url in ADDRESS_APPS:
+        if key == "mnemosyne" and "mnemosyne" not in installed_services():
+            continue
         local_port = _port(url)
         ts_port = served.get(local_port) if served is not None else TS_DEFAULTS.get(key)
         rows.append({"key": key, "name": name, "what": what, "local": f"http://localhost:{local_port}",
                      "remote": (f"https://{host}" + ("" if ts_port == 443 else f":{ts_port}")) if host and ts_port else None})
     _addr["v"], _addr["at"] = {"host": host, "fromTailscale": served is not None, "apps": rows}, time.time()
     return _addr["v"]
+
+
+# ---------- restore from backups (through the backup command's own browse/restore, never overwriting) ----------
+RUNNER = os.environ.get("BACKUP_RUNNER", "/usr/local/bin/homelab-backup")
+
+
+class RestoreNotSetUp(Exception):
+    pass
+
+
+def runner(*args, timeout=120):
+    cmd = [RUNNER, *args] if os.environ.get("BACKUP_RUNNER_NO_SUDO") else ["sudo", "-n", RUNNER, *args]
+    r = subprocess.run(cmd, capture_output=True, text=True, timeout=timeout)
+    if r.returncode != 0 and ("password is required" in r.stderr or "not allowed to execute" in r.stderr or "sudoers" in r.stderr):
+        raise RestoreNotSetUp()
+    return r
+
+
+def restore_places():
+    out = json.loads(runner("snapshots-json", timeout=180).stdout or "[]")
+    for place in out:
+        place["snapshots"] = sorted(({"id": x["short_id"], "time": x["time"]} for x in place.get("snapshots") or []),
+                                    key=lambda x: x["time"], reverse=True)
+    return {"places": out, "roots": [{"name": "Media", "path": "/srv/media"},
+                                     {"name": "Home folder", "path": os.path.expanduser("~")}]}
+
+
+def restore_ls(place, snap, path):
+    r = runner("ls-json", place, snap, path, timeout=180)
+    want = os.path.normpath(path)
+    items = []
+    for line in r.stdout.splitlines():
+        try:
+            j = json.loads(line)
+        except ValueError:
+            continue
+        if j.get("error"):
+            raise ValueError("That folder isn't one Olympus can restore from")
+        if j.get("struct_type") == "node" and os.path.dirname(j.get("path", "")) == want:
+            items.append({"name": j.get("name"), "type": j.get("type"), "size": j.get("size") or 0,
+                          "mtime": j.get("mtime"), "path": j.get("path")})
+    items.sort(key=lambda i: (i["type"] != "dir", (i["name"] or "").lower()))
+    return {"path": want, "items": items}
+
+
+def restore_run(place, snap, path):
+    r = runner("restore-to", place, snap, path, timeout=7200)
+    try:
+        j = json.loads(r.stdout.strip().splitlines()[-1])
+    except (ValueError, IndexError):
+        raise ValueError("The restore didn't finish")
+    if j.get("error"):
+        raise ValueError("The restore didn't work" if j["error"] != "not allowed" else "That isn't something Olympus can restore")
+    return {"to": j["to"].replace(os.path.expanduser("~"), "~", 1)}
 
 
 # ---------- web server ----------
@@ -622,7 +686,7 @@ class Handler(http.server.SimpleHTTPRequestHandler):
     def do_GET(self):
         if self.path == "/api/status":
             results = {}
-            threads = [threading.Thread(target=lambda k=k, u=u: results.__setitem__(k, check(u))) for k, u in SERVICES.items()]
+            threads = [threading.Thread(target=lambda k=k, u=u: results.__setitem__(k, check(u))) for k, u in installed_services().items()]
             [t.start() for t in threads]
             [t.join() for t in threads]
             return self._json(results)
@@ -679,6 +743,21 @@ class Handler(http.server.SimpleHTTPRequestHandler):
                 gf_call("POST", f"/api/v1/accounts/{body['id']}/balances",
                         {"balance": bal, "date": time.strftime("%Y-%m-%d")})
                 return self._json({"ok": True, "balance": bal})
+            except Exception as e:
+                return self._json({"ok": False, "error": str(e)[:200]})
+        if self.path in ("/api/restore/places", "/api/restore/ls", "/api/restore/run"):
+            if not self._drop_allowed():
+                return
+            try:
+                body = json.loads(self.rfile.read(int(self.headers.get("Content-Length") or 0)) or b"{}")
+                if self.path == "/api/restore/places":
+                    return self._json({"ok": True, **restore_places()})
+                args = (str(body.get("place", "")), str(body.get("snap", "")), str(body.get("path", "")))
+                if self.path == "/api/restore/ls":
+                    return self._json({"ok": True, **restore_ls(*args)})
+                return self._json({"ok": True, **restore_run(*args)})
+            except RestoreNotSetUp:
+                return self._json({"ok": False, "setup": True, "error": "Restoring from Olympus isn't switched on yet"})
             except Exception as e:
                 return self._json({"ok": False, "error": str(e)[:200]})
         if self.path in ("/api/storage/clear", "/api/storage/restore", "/api/storage/delete", "/api/stats/snapshot"):

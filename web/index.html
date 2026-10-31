@@ -157,6 +157,16 @@ button.fo{width:100%;text-align:left;font:inherit;color:var(--text)}
 .aline .off{flex:1;color:var(--muted)}
 .aline button{flex:none;height:26px;padding:0 10px;border-radius:999px;border:1px solid var(--line);color:var(--soft);font-size:11px}
 .aline button:hover{border-color:var(--accent);color:var(--text)}
+.rsel{display:flex;gap:8px;flex-wrap:wrap;align-items:center}
+.rsel select{height:34px;padding:0 10px;border-radius:10px;background:var(--raised);color:var(--text);border:1px solid var(--line);font:inherit;font-size:12px;max-width:100%}
+.crumbs{display:flex;flex-wrap:wrap;gap:4px;font-size:12px;color:var(--muted);align-items:center}
+.crumbs button{color:var(--soft);font-size:12px;padding:2px 4px;border-radius:6px}
+.crumbs button:hover{color:var(--text);background:var(--hover)}
+.srow .fi{flex:none;width:28px;height:28px;border-radius:8px;display:grid;place-items:center;background:var(--raised);color:var(--accent)}
+.srow.dir .t b{cursor:pointer}
+.srow.dir .t b:hover{color:var(--accent)}
+.rdone{padding:12px 14px;border-radius:12px;background:var(--raised);border:1px solid var(--line-soft);font-size:12px;line-height:1.6}
+.rdone code{color:var(--text)}
 #disk{cursor:pointer}
 #disk:hover .l span:first-child{color:var(--text)}
 .app-tile{position:relative;display:flex;flex-direction:column;gap:14px;padding:20px;border-radius:18px;background:var(--panel);border:1px solid var(--line);min-height:190px;overflow:hidden;transition:border-color .15s,transform .15s}
@@ -387,6 +397,7 @@ footer button{color:var(--muted);text-decoration:underline}
         </div>
       </div>
       <a class="ex" id="t-cerberus" target="_blank" rel="noopener"><span class="dot"></span><span class="ic" data-icon="shield"></span><span class="nm">Cerberus</span><span class="tip">Cerberus<small class="st">Passwords · checking…</small></span></a>
+      <a class="ex" id="t-mnemosyne" target="_blank" rel="noopener"><span class="dot"></span><span class="ic" data-icon="photo"></span><span class="nm">Mnemosyne</span><span class="tip">Mnemosyne<small class="st">Photos · checking…</small></span></a>
       <button class="ex settings" id="x-settings" type="button"><span class="ic" data-icon="gear"></span><span class="nm">Settings</span></button>
     </nav>
 
@@ -460,8 +471,22 @@ footer button{color:var(--muted);text-decoration:underline}
     <p class="note">“Anywhere” addresses work on any of your devices with Tailscale switched on. “On this PC” only works on the PC itself.</p>
     <h4>Phone alerts</h4>
     <div class="srow"><span class="t"><b>ntfy topic</b><small id="setTopic">…</small></span><button type="button" id="setTest">Send a test</button></div>
+    <h4>Backups</h4>
+    <div class="srow"><span class="t"><b>Restore files</b><small>Get back anything from your music, films, photos or home folder</small></span><button type="button" id="setRestore">Restore…</button></div>
     <h4>This device</h4>
     <div class="srow"><span class="t"><b id="setWho">Signed in</b><small>Olympus remembers your music and films accounts on this device</small></span><button type="button" id="setOut">Sign out</button></div>
+  </div>
+</div>
+
+<div class="scrim hidden" id="restScrim">
+  <div class="sheet wide" id="restSheet" role="dialog" aria-modal="true" aria-labelledby="restTitle">
+    <button class="x" type="button" id="restClose" aria-label="Close"><span data-icon="close"></span></button>
+    <h2 id="restTitle">Restore from backups</h2>
+    <p class="sub">Get back a lost file or folder. It's restored into a new folder, so nothing you have now is changed.</p>
+    <div class="rsel"><select id="restPlace" aria-label="Which backup"></select><select id="restSnap" aria-label="Which day"></select></div>
+    <div class="crumbs" id="restCrumbs"></div>
+    <div class="slist" id="restList"><div class="note">Loading…</div></div>
+    <div id="restDone"></div>
   </div>
 </div>
 
@@ -482,6 +507,10 @@ const ICONS = {
   play: P('<path d="M7 4l13 8-13 8z"/>'),
   dl: P('<path d="M12 4v11M7 10l5 5 5-5M5 20h14"/>'),
   gear: P('<circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.7 1.7 0 0 0 .3 1.8l.1.1a2 2 0 1 1-2.8 2.8l-.1-.1a1.7 1.7 0 0 0-1.8-.3 1.7 1.7 0 0 0-1 1.5V21a2 2 0 1 1-4 0v-.1a1.7 1.7 0 0 0-1.1-1.5 1.7 1.7 0 0 0-1.8.3l-.1.1a2 2 0 1 1-2.8-2.8l.1-.1a1.7 1.7 0 0 0 .3-1.8 1.7 1.7 0 0 0-1.5-1H3a2 2 0 1 1 0-4h.1a1.7 1.7 0 0 0 1.5-1.1 1.7 1.7 0 0 0-.3-1.8l-.1-.1a2 2 0 1 1 2.8-2.8l.1.1a1.7 1.7 0 0 0 1.8.3H9a1.7 1.7 0 0 0 1-1.5V3a2 2 0 1 1 4 0v.1a1.7 1.7 0 0 0 1 1.5 1.7 1.7 0 0 0 1.8-.3l.1-.1a2 2 0 1 1 2.8 2.8l-.1.1a1.7 1.7 0 0 0-.3 1.8V9a1.7 1.7 0 0 0 1.5 1H21a2 2 0 1 1 0 4h-.1a1.7 1.7 0 0 0-1.5 1z"/>'),
+  folder: P('<path d="M3 7a2 2 0 0 1 2-2h4l2 2h8a2 2 0 0 1 2 2v8a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/>'),
+  file: P('<path d="M14 3H7a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2V8z"/><path d="M14 3v5h5"/>'),
+  restore: P('<path d="M3 12a9 9 0 1 0 3-6.7L3 8"/><path d="M3 3v5h5M12 7v5l3 2"/>'),
+  photo: P('<rect x="3" y="5" width="18" height="15" rx="2"/><circle cx="9" cy="10" r="2"/><path d="M21 17l-5-5-9 8"/>'),
   link: P('<path d="M10 14a4 4 0 0 0 5.7 0l3-3a4 4 0 0 0-5.7-5.7l-1 1"/><path d="M14 10a4 4 0 0 0-5.7 0l-3 3a4 4 0 0 0 5.7 5.7l1-1"/>'),
   disk: P('<rect x="3" y="4" width="18" height="16" rx="2"/><path d="M3 14h18M7 17h.01"/>'),
   close: P('<path d="M6 6l12 12M18 6L6 18"/>'),
@@ -519,6 +548,7 @@ const APPS = {
   apollo: viaTailscale ? `https://${host}` : `http://${host}:8090`,
   theia: viaTailscale ? `https://${host}:8443` : `http://${host}:8095`,
   cerberus: viaTailscale ? `https://${host}:7443` : `http://${host}:8222`,
+  mnemosyne: viaTailscale ? `https://${host}:6443` : `http://${host}:2283`,
 };
 $('#where').textContent = viaTailscale ? 'via Tailscale' : 'on this PC';
 for (const k of Object.keys(APPS)) $('#t-' + k).href = APPS[k] + '/';
@@ -640,7 +670,7 @@ function tickClock(){
 }
 
 /* ---------- status ---------- */
-const SVC_NAMES = { odysseus: 'Odysseus', apollo: 'Apollo', theia: 'Theia', cerberus: 'Cerberus', budget: 'Plutus · budget', investments: 'Plutus · investments', navidrome: 'Navidrome · music library', jellyfin: 'Jellyfin · film library' };
+const SVC_NAMES = { odysseus: 'Odysseus', apollo: 'Apollo', theia: 'Theia', cerberus: 'Cerberus', budget: 'Plutus · budget', investments: 'Plutus · investments', mnemosyne: 'Mnemosyne · photos', navidrome: 'Navidrome · music library', jellyfin: 'Jellyfin · film library' };
 async function loadStatus(){
   let s;
   try { s = await (await fetch('/api/status')).json(); } catch { return; }
@@ -650,10 +680,12 @@ async function loadStatus(){
     $('#t-budget .dot').className = 'dot ' + (b ? 'up' : 'down');
     $('#t-investments .dot').className = 'dot ' + (i ? 'up' : 'down');
   }
-  for (const k of ['cerberus']) {
+  for (const [k, what] of [['cerberus', 'Passwords'], ['mnemosyne', 'Photos']]) {
     const t = $('#t-' + k); const up = s[k] && s[k].up;
+    if (k === 'mnemosyne' && !s[k]) { t.classList.add('hidden'); continue; }   // not installed (yet)
+    t.classList.remove('hidden');
     t.querySelector('.dot').className = 'dot ' + (up ? 'up' : 'down');
-    t.querySelector('.st').textContent = 'Passwords · ' + (up ? 'running' : 'not running');
+    t.querySelector('.st').textContent = `${what} · ` + (up ? 'running' : 'not running');
   }
   for (const k of ['odysseus', 'apollo', 'theia']) {
     const t = $('#t-' + k); const engine = k === 'apollo' ? s.navidrome : k === 'theia' ? s.jellyfin : null;
@@ -661,7 +693,7 @@ async function loadStatus(){
     t.querySelector('.dot').className = 'dot ' + (up ? 'up' : 'down');
     t.querySelector('.st').textContent = up ? 'Running' : (s[k] && s[k].up ? `${k === 'apollo' ? 'Navidrome' : 'Jellyfin'} is down` : 'Not running');
   }
-  $('#svc').innerHTML = Object.entries(SVC_NAMES).map(([k, n]) => `<div><span class="dot ${s[k] && s[k].up ? 'up' : 'down'}"></span><span class="n">${esc(n)}</span><span class="ms">${s[k] && s[k].up ? s[k].ms + ' ms' : 'down'}</span></div>`).join('');
+  $('#svc').innerHTML = Object.entries(SVC_NAMES).filter(([k]) => k !== 'mnemosyne' || s[k]).map(([k, n]) => `<div><span class="dot ${s[k] && s[k].up ? 'up' : 'down'}"></span><span class="n">${esc(n)}</span><span class="ms">${s[k] && s[k].up ? s[k].ms + ' ms' : 'down'}</span></div>`).join('');
 }
 
 /* ---------- the PC ---------- */
@@ -680,7 +712,7 @@ async function loadSystem(){
   let s;
   try { s = await (await fetch('/api/system')).json(); } catch { return; }
   const d = s.disk; const f = s.folders || {};
-  const parts = [['Music', f.music, '#e0805f'], ['Films', f.movies, '#8fa8e0'], ['Shows', f.shows, '#7fb98a']].filter(p => p[1]);
+  const parts = [['Music', f.music, '#e0805f'], ['Films', f.movies, '#8fa8e0'], ['Shows', f.shows, '#7fb98a'], ['Photos', f.photos, '#d98fb0']].filter(p => p[1]);
   const media = parts.reduce((t, p) => t + p[1], 0);
   const other = Math.max(0, d.used - media);
   $('#disk').innerHTML = `<div class="l"><span>Storage <span style="color:var(--muted)">${esc(d.path)}</span></span><b>${fmtBytes(d.free)} free</b></div>
@@ -718,8 +750,9 @@ async function loadBackup(){
     if (!r.ok) return `<div><span>${label}</span><b class="bad">✗ ${esc(r.error || 'failed')}</b></div>`;
     return `<div><span>${label} · ${r.snapshots} backup${r.snapshots === 1 ? '' : 's'}</span><b>✓ ${fmtBytes(r.size)}</b>${extra ? `<span style="margin:4px 0 0">${extra}</span>` : ''}</div>`;
   };
-  el.innerHTML = `<div class="hd"><span class="dot ${cls}"></span><span class="t">Backups · ${msg}<small>${when ? 'Last ' + nice(when) : 'Never run'} · runs nightly at 3am</small></span></div>
+  el.innerHTML = `<div class="hd"><span class="dot ${cls}"></span><span class="t">Backups · ${msg}<small>${when ? 'Last ' + nice(when) : 'Never run'} · runs nightly at 3am</small></span><button class="mini" type="button" id="bkRestore">Restore…</button></div>
     <div class="where">${place('HDD', b.hdd || b.usb, (b.hdd_free || b.usb_free) ? fmtBytes(b.hdd_free || b.usb_free) + ' free' : '')}${place('Koofr', b.koofr, 'offsite')}</div>`;
+  $('#bkRestore').onclick = openRestore;
 }
 
 /* ---------- live bits ---------- */
@@ -824,7 +857,7 @@ function storRow(title, meta, buttons){
 async function paintStorageDisk(){
   let s; try { s = await (await fetch('/api/system')).json(); } catch { return; }
   const d = s.disk, f = s.folders || {};
-  const parts = [['Music', f.music, '#e0805f'], ['Films', f.movies, '#8fa8e0'], ['Shows', f.shows, '#7fb98a'], ['Inbox', f.inbox, '#d9b35b'], ['Recently cleared', f['.cleared'], '#a47fc9']].filter(p => p[1]);
+  const parts = [['Music', f.music, '#e0805f'], ['Films', f.movies, '#8fa8e0'], ['Shows', f.shows, '#7fb98a'], ['Photos', f.photos, '#d98fb0'], ['Inbox', f.inbox, '#d9b35b'], ['Recently cleared', f['.cleared'], '#a47fc9']].filter(p => p[1]);
   const other = Math.max(0, d.used - parts.reduce((t, p) => t + p[1], 0));
   $('#storSub').textContent = `${fmtBytes(d.free)} free of ${fmtBytes(d.total)}`;
   $('#storDisk').innerHTML = `<div class="diskbar">${parts.map(p => `<span style="width:${p[1] / d.total * 100}%;background:${p[2]}"></span>`).join('')}<span style="width:${other / d.total * 100}%;background:#5a5754"></span></div>
@@ -1025,6 +1058,92 @@ $('#setTest').addEventListener('click', async (e) => {
 $('#setOut').addEventListener('click', () => $('#logout').click());
 $('#addrScrim').addEventListener('click', (e) => { if (e.target.id === 'addrScrim') closeAddresses(); });
 document.addEventListener('keydown', (e) => { if (e.key === 'Escape' && !$('#addrScrim').classList.contains('hidden')) closeAddresses(); });
+
+/* ---------- restore from backups ---------- */
+let rest = { places: [], roots: [], place: null, snap: null, path: null };
+const PLACE_NAMES = { hdd: 'Backup drive', usb: 'Backup drive', koofr: 'Koofr (cloud)' };
+const niceWhen = (t) => new Date(t).toLocaleString('en-GB', { weekday: 'short', day: 'numeric', month: 'short', hour: '2-digit', minute: '2-digit' });
+async function restCall(path, body){
+  const j = await adminPost(path, body).catch(e => ({ ok: false, error: e.message }));
+  return j;
+}
+function restCrumbs(){
+  const box = $('#restCrumbs'); box.innerHTML = '';
+  const add = (label, path) => { const b = document.createElement('button'); b.type = 'button'; b.textContent = label; b.onclick = () => restOpen(path); box.appendChild(b); };
+  add('Backups', null);
+  const root = rest.path && rest.roots.find(r => rest.path === r.path || rest.path.startsWith(r.path + '/'));
+  if (!root) return;
+  box.append(' › '); add(root.name, root.path);
+  const rel = rest.path.slice(root.path.length).split('/').filter(Boolean);
+  rel.forEach((part, i) => { box.append(' › '); add(part, root.path + '/' + rel.slice(0, i + 1).join('/')); });
+}
+async function restOpen(path){
+  rest.path = path; $('#restDone').innerHTML = '';
+  const list = $('#restList');
+  restCrumbs();
+  if (!path) {                                  // the top: media and home folder
+    list.innerHTML = '';
+    for (const r of rest.roots) list.appendChild(restRow({ name: r.name, type: 'dir', path: r.path }, r.path));
+    return;
+  }
+  list.innerHTML = '<div class="note">Looking inside the backup…</div>';
+  const j = await restCall('/api/restore/ls', { place: rest.place, snap: rest.snap, path });
+  if (!j.ok) { list.innerHTML = `<div class="note">${esc(j.error || 'Couldn’t open that folder')}</div>`; return; }
+  list.innerHTML = j.items.length ? '' : '<div class="note">Nothing in this folder in that backup.</div>';
+  for (const it of j.items) list.appendChild(restRow(it));
+}
+function restRow(it, subtitle){
+  const row = document.createElement('div'); row.className = 'srow' + (it.type === 'dir' ? ' dir' : '');
+  const meta = subtitle || (it.type === 'dir' ? 'Folder' : `${fmtBytes(it.size)}${it.mtime ? ' · ' + shortDate(it.mtime) : ''}`);
+  row.innerHTML = `<span class="fi">${icon(it.type === 'dir' ? 'folder' : 'file')}</span><span class="t"><b title="${esc(it.name)}">${esc(it.name)}</b><small>${esc(meta)}</small></span>`;
+  if (it.type === 'dir') row.querySelector('b').onclick = () => restOpen(it.path);
+  if (!subtitle) {
+    const b = document.createElement('button'); b.type = 'button'; b.textContent = 'Restore';
+    b.onclick = async () => {
+      b.disabled = true; b.textContent = 'Restoring…';
+      const j = await restCall('/api/restore/run', { place: rest.place, snap: rest.snap, path: it.path });
+      b.textContent = 'Restore'; b.disabled = false;
+      $('#restDone').innerHTML = j.ok
+        ? `<div class="rdone">✓ <b>${esc(it.name)}</b> is back, from ${esc(niceWhen(rest.time))}.<br>It's in <code>${esc(j.to)}</code>. Nothing else was changed, so copy it back wherever you want it.</div>`
+        : `<div class="rdone">✗ ${esc(j.error || 'That didn’t work')}</div>`;
+    };
+    row.appendChild(b);
+  } else {
+    const b = document.createElement('button'); b.type = 'button'; b.textContent = 'Open'; b.onclick = () => restOpen(it.path); row.appendChild(b);
+  }
+  return row;
+}
+function restPaintSnaps(){
+  const place = rest.places.find(p => p.place === rest.place);
+  const sel = $('#restSnap');
+  sel.innerHTML = (place ? place.snapshots : []).map(x => `<option value="${esc(x.id)}">${esc(niceWhen(x.time))}</option>`).join('');
+  rest.snap = sel.value; rest.time = place && place.snapshots[0] && place.snapshots[0].time;
+}
+async function openRestore(){
+  closeAddresses();
+  $('#restScrim').classList.remove('hidden'); $('#restClose').focus();
+  $('#restList').innerHTML = '<div class="note">Finding your backups…</div>'; $('#restCrumbs').innerHTML = ''; $('#restDone').innerHTML = '';
+  const j = await restCall('/api/restore/places', {});
+  if (!j.ok) {
+    $('#restList').innerHTML = `<div class="note">${esc(j.error || 'Couldn’t reach the backups')}${j.setup ? '. Run the latest Olympus update on the PC to switch it on.' : ''}</div>`;
+    $('#restPlace').innerHTML = ''; $('#restSnap').innerHTML = ''; return;
+  }
+  rest.places = j.places.filter(p => p.snapshots.length); rest.roots = j.roots;
+  if (!rest.places.length) { $('#restList').innerHTML = '<div class="note">No backups yet. The first one runs tonight at 3am.</div>'; return; }
+  $('#restPlace').innerHTML = rest.places.map(p => `<option value="${esc(p.place)}">${esc(PLACE_NAMES[p.place] || p.place)}</option>`).join('');
+  rest.place = rest.places[0].place; restPaintSnaps(); restOpen(null);
+}
+$('#restPlace').addEventListener('change', (e) => { rest.place = e.target.value; restPaintSnaps(); restOpen(rest.path); });
+$('#restSnap').addEventListener('change', (e) => {
+  rest.snap = e.target.value;
+  const place = rest.places.find(p => p.place === rest.place); const s = place && place.snapshots.find(x => x.id === rest.snap); rest.time = s && s.time;
+  restOpen(rest.path);
+});
+function closeRestore(){ $('#restScrim').classList.add('hidden'); }
+$('#restClose').addEventListener('click', closeRestore);
+$('#restScrim').addEventListener('click', (e) => { if (e.target.id === 'restScrim') closeRestore(); });
+document.addEventListener('keydown', (e) => { if (e.key === 'Escape' && !$('#restScrim').classList.contains('hidden')) closeRestore(); });
+$('#setRestore').addEventListener('click', openRestore);
 
 /* ---------- quick actions ---------- */
 function paintChips(){
