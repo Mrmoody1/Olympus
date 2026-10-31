@@ -52,6 +52,7 @@ SERVICES = {
     "clio": os.environ.get("CLIO_URL", "http://127.0.0.1:13378").rstrip("/") + "/ping",
     "aegis": os.environ.get("AEGIS_URL", "http://127.0.0.1:3080").rstrip("/") + "/",
     "athena": os.environ.get("ATHENA_URL", "http://127.0.0.1:8010").rstrip("/") + "/",
+    "hermes": os.environ.get("HERMES_URL", "http://127.0.0.1:8081").rstrip("/") + "/status.php",
 }
 NTFY_URL = os.environ.get("NTFY_URL", "http://127.0.0.1:8091").rstrip("/")
 NTFY_TOPIC = os.environ.get("NTFY_TOPIC", "olympus")
@@ -62,7 +63,7 @@ AEGIS_CONF = os.path.expanduser(os.environ.get("AEGIS_CONF", "~/.config/olympus/
 def installed_services():
     """SERVICES, minus apps that aren't installed on this PC (Mnemosyne is optional)."""
     optional = {"mnemosyne": os.environ.get("MNEMOSYNE_DIR", "/opt/mnemosyne"), "clio": os.environ.get("CLIO_DIR", "/opt/clio"),
-                "athena": os.environ.get("ATHENA_DIR", "/opt/athena")}
+                "athena": os.environ.get("ATHENA_DIR", "/opt/athena"), "hermes": os.environ.get("HERMES_DIR", "/opt/hermes")}
     have = {k: os.path.exists(d + "/docker-compose.yml") for k, d in optional.items()}
     have["aegis"] = os.path.exists(AEGIS_CONF)
     return {k: u for k, u in SERVICES.items() if have.get(k, True)}
@@ -83,7 +84,7 @@ def ts_host():
 
 BACKUP_STATUS = os.environ.get("BACKUP_STATUS", "/var/lib/homelab-backup/status.json")
 NTFY_TOKEN = os.environ.get("NTFY_TOKEN", "")
-NICE = {"odysseus": "Odysseus", "apollo": "Apollo", "theia": "Theia", "cerberus": "Cerberus (passwords)", "budget": "Plutus budget", "investments": "Plutus investments", "navidrome": "Navidrome (music library)", "jellyfin": "Jellyfin (film library)", "mnemosyne": "Mnemosyne (photos)", "clio": "Clio (books)", "aegis": "Aegis (ad blocking)", "athena": "Athena (documents)"}
+NICE = {"odysseus": "Odysseus", "apollo": "Apollo", "theia": "Theia", "cerberus": "Cerberus (passwords)", "budget": "Plutus budget", "investments": "Plutus investments", "navidrome": "Navidrome (music library)", "jellyfin": "Jellyfin (film library)", "mnemosyne": "Mnemosyne (photos)", "clio": "Clio (books)", "aegis": "Aegis (ad blocking)", "athena": "Athena (documents)", "hermes": "Hermes (drive)"}
 HOP_BY_HOP = {"connection", "keep-alive", "proxy-authenticate", "proxy-authorization",
               "te", "trailers", "transfer-encoding", "upgrade", "host"}
 
@@ -306,7 +307,7 @@ def watcher():
             fails[k] = 0 if up else fails[k] + 1
             if fails[k] == 2 and k not in down:          # two misses in a row = really down
                 down.add(k)
-                notify(f"{NICE[k]} is down", f"{NICE[k]} stopped answering. Try: sudo systemctl restart {k}" if k not in ("odysseus", "cerberus", "budget", "investments", "mnemosyne", "clio", "aegis", "athena") else f"{NICE[k]} stopped answering. Try: docker ps", "warning", "high")
+                notify(f"{NICE[k]} is down", f"{NICE[k]} stopped answering. Try: sudo systemctl restart {k}" if k not in ("odysseus", "cerberus", "budget", "investments", "mnemosyne", "clio", "aegis", "athena", "hermes") else f"{NICE[k]} stopped answering. Try: docker ps", "warning", "high")
             elif up and k in down:
                 down.discard(k)
                 notify(f"{NICE[k]} is back", f"{NICE[k]} is running again.", "white_check_mark")
@@ -557,6 +558,7 @@ ADDRESS_APPS = [  # key, name, what it is, local URL
     ("mnemosyne", "Mnemosyne", "Photos", os.environ.get("MNEMOSYNE_URL", "http://127.0.0.1:2283")),
     ("clio", "Clio", "Books & podcasts", os.environ.get("CLIO_URL", "http://127.0.0.1:13378")),
     ("athena", "Athena", "Documents", os.environ.get("ATHENA_URL", "http://127.0.0.1:8010")),
+    ("hermes", "Hermes", "Your Drive", os.environ.get("HERMES_URL", "http://127.0.0.1:8081")),
     ("aegis", "Aegis", "Ad blocking (admin page)", os.environ.get("AEGIS_URL", "http://127.0.0.1:3080")),
     ("budget", "Plutus budget", "Budget", os.environ.get("BUDGET_URL", "http://127.0.0.1:5006")),
     ("investments", "Plutus investments", "Investments", os.environ.get("INVESTMENTS_URL", "http://127.0.0.1:3333")),
@@ -564,7 +566,7 @@ ADDRESS_APPS = [  # key, name, what it is, local URL
     ("jellyfin", "Jellyfin", "Film library admin (this PC)", BACKENDS["/jf/"]),
     ("ntfy", "ntfy", "Phone alerts server", NTFY_URL),
 ]
-TS_DEFAULTS = {"athena": 8843, "aegis": 4553, "clio": 4443, "mnemosyne": 6443, "olympus": 9443, "apollo": 443, "theia": 8443, "odysseus": 10000, "cerberus": int(CERBERUS_TS_PORT),
+TS_DEFAULTS = {"hermes": 7843, "athena": 8843, "aegis": 4553, "clio": 4443, "mnemosyne": 6443, "olympus": 9443, "apollo": 443, "theia": 8443, "odysseus": 10000, "cerberus": int(CERBERUS_TS_PORT),
                "budget": 5443, "investments": 3443}
 _addr = {"at": 0, "v": None}
 
@@ -600,7 +602,7 @@ def addresses():
     host, served = ts_host(), served_ports()
     rows = []
     for key, name, what, url in ADDRESS_APPS:
-        if key in ("mnemosyne", "clio", "aegis", "athena") and key not in installed_services():
+        if key in ("mnemosyne", "clio", "aegis", "athena", "hermes") and key not in installed_services():
             continue
         local_port = _port(url)
         ts_port = served.get(local_port) if served is not None else TS_DEFAULTS.get(key)
@@ -793,6 +795,7 @@ class Handler(http.server.SimpleHTTPRequestHandler):
             # Bitwarden only works over https, so Cerberus always opens on its Tailscale address.
             return self._json({
                 "cerberus": f"https://{h}:{CERBERUS_TS_PORT}/" if h else None,
+                "hermes": f"https://{h}:7843/" if h else None,
                 "budget": f"https://{h}:5443/" if h else None,
                 "investments": f"https://{h}:3443/" if h else None,
             })

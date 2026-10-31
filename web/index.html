@@ -461,6 +461,7 @@ footer button{color:var(--muted);text-decoration:underline}
       <a class="ex" id="t-cerberus" target="_blank" rel="noopener"><span class="dot"></span><span class="ic" data-icon="shield"></span><span class="nm">Cerberus</span><span class="tip">Cerberus<small class="st">Passwords · checking…</small></span></a>
       <a class="ex" id="t-mnemosyne" target="_blank" rel="noopener"><span class="dot"></span><span class="ic" data-icon="photo"></span><span class="nm">Mnemosyne</span><span class="tip">Mnemosyne<small class="st">Photos · checking…</small></span></a>
       <a class="ex" id="t-athena" target="_blank" rel="noopener"><span class="dot"></span><span class="ic" data-icon="doc"></span><span class="nm">Athena</span><span class="tip">Athena<small class="st">Documents · checking…</small></span></a>
+      <a class="ex" id="t-hermes" target="_blank" rel="noopener"><span class="dot"></span><span class="ic" data-icon="cloud"></span><span class="nm">Hermes</span><span class="tip">Hermes<small class="st">Drive · checking…</small></span></a>
       <a class="ex" id="t-aegis" target="_blank" rel="noopener"><span class="dot"></span><span class="ic" data-icon="aegis"></span><span class="nm">Aegis</span><span class="tip">Aegis<small class="st">Ad blocking · checking…</small></span></a>
       <a class="ex" id="t-clio" target="_blank" rel="noopener"><span class="dot"></span><span class="ic" data-icon="book"></span><span class="nm">Clio</span><span class="tip">Clio<small class="st">Books · checking…</small></span></a>
       <button class="ex settings" id="x-settings" type="button"><span class="ic" data-icon="gear"></span><span class="nm">Settings</span></button>
@@ -611,6 +612,7 @@ const ICONS = {
   play: P('<path d="M7 4l13 8-13 8z"/>'),
   dl: P('<path d="M12 4v11M7 10l5 5 5-5M5 20h14"/>'),
   gear: P('<circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.7 1.7 0 0 0 .3 1.8l.1.1a2 2 0 1 1-2.8 2.8l-.1-.1a1.7 1.7 0 0 0-1.8-.3 1.7 1.7 0 0 0-1 1.5V21a2 2 0 1 1-4 0v-.1a1.7 1.7 0 0 0-1.1-1.5 1.7 1.7 0 0 0-1.8.3l-.1.1a2 2 0 1 1-2.8-2.8l.1-.1a1.7 1.7 0 0 0 .3-1.8 1.7 1.7 0 0 0-1.5-1H3a2 2 0 1 1 0-4h.1a1.7 1.7 0 0 0 1.5-1.1 1.7 1.7 0 0 0-.3-1.8l-.1-.1a2 2 0 1 1 2.8-2.8l.1.1a1.7 1.7 0 0 0 1.8.3H9a1.7 1.7 0 0 0 1-1.5V3a2 2 0 1 1 4 0v.1a1.7 1.7 0 0 0 1 1.5 1.7 1.7 0 0 0 1.8-.3l.1-.1a2 2 0 1 1 2.8 2.8l-.1.1a1.7 1.7 0 0 0-.3 1.8V9a1.7 1.7 0 0 0 1.5 1H21a2 2 0 1 1 0 4h-.1a1.7 1.7 0 0 0-1.5 1z"/>'),
+  cloud: P('<path d="M7 18a4.5 4.5 0 0 1-.6-8.96A6 6 0 0 1 18 9a4.5 4.5 0 0 1-.5 9z"/>'),
   doc: P('<path d="M7 3h7l5 5v13H7z"/><path d="M14 3v5h5M10 13h6M10 17h6"/>'),
   aegis: P('<circle cx="12" cy="12" r="9"/><circle cx="12" cy="12" r="5"/><path d="M12 3v4M12 17v4M3 12h4M17 12h4"/>'),
   book: P('<path d="M4 5a2 2 0 0 1 2-2h13v16H6a2 2 0 0 0-2 2z"/><path d="M4 21V5M19 19v2H6"/><path d="M9 7h6"/>'),
@@ -662,11 +664,12 @@ const APPS = {
   clio: viaTailscale ? `https://${host}:4443` : `http://${host}:13378`,
   aegis: viaTailscale ? `https://${host}:4553` : `http://${host}:3080`,
   athena: viaTailscale ? `https://${host}:8843` : `http://${host}:8010`,
+  hermes: viaTailscale ? `https://${host}:7843` : `http://${host}:8081`,
 };
 $('#where').textContent = viaTailscale ? 'via Tailscale' : 'on this PC';
 for (const k of Object.keys(APPS)) $('#t-' + k).href = APPS[k] + '/';
 $('#t-budget').href = `http://${host}:5006/`; $('#t-investments').href = `http://${host}:3333/`;
-fetch('/api/links').then(r => r.json()).then(l => { for (const k of ['cerberus', 'budget', 'investments']) if (l[k]) $('#t-' + k).href = l[k]; }).catch(() => {});
+fetch('/api/links').then(r => r.json()).then(l => { for (const k of ['cerberus', 'hermes', 'budget', 'investments']) if (l[k]) $('#t-' + k).href = l[k]; }).catch(() => {});
 const plutusBtn = $('#x-plutus'), plutusMenu = $('#plutusMenu');
 const setPlutus = (open) => { plutusMenu.classList.toggle('hidden', !open); plutusBtn.setAttribute('aria-expanded', open); };
 plutusBtn.addEventListener('click', (e) => { e.stopPropagation(); setPlutus(plutusMenu.classList.contains('hidden')); });
@@ -783,7 +786,7 @@ function tickClock(){
 }
 
 /* ---------- status ---------- */
-const SVC_NAMES = { odysseus: 'Odysseus', apollo: 'Apollo', theia: 'Theia', cerberus: 'Cerberus', budget: 'Plutus · budget', investments: 'Plutus · investments', mnemosyne: 'Mnemosyne · photos', clio: 'Clio · books', athena: 'Athena · documents', aegis: 'Aegis · ad blocking', navidrome: 'Navidrome · music library', jellyfin: 'Jellyfin · film library' };
+const SVC_NAMES = { odysseus: 'Odysseus', apollo: 'Apollo', theia: 'Theia', cerberus: 'Cerberus', budget: 'Plutus · budget', investments: 'Plutus · investments', mnemosyne: 'Mnemosyne · photos', clio: 'Clio · books', athena: 'Athena · documents', hermes: 'Hermes · drive', aegis: 'Aegis · ad blocking', navidrome: 'Navidrome · music library', jellyfin: 'Jellyfin · film library' };
 async function loadStatus(){
   let s;
   try { s = await (await fetch('/api/status')).json(); } catch { return; }
@@ -794,7 +797,7 @@ async function loadStatus(){
     $('#t-investments .dot').className = 'dot ' + (i ? 'up' : 'down');
   }
   if (window.olympusDropModes) window.olympusDropModes(!!s.athena);
-  for (const [k, what] of [['cerberus', 'Passwords'], ['mnemosyne', 'Photos'], ['clio', 'Books'], ['athena', 'Documents'], ['aegis', 'Ad blocking']]) {
+  for (const [k, what] of [['cerberus', 'Passwords'], ['mnemosyne', 'Photos'], ['clio', 'Books'], ['athena', 'Documents'], ['hermes', 'Drive'], ['aegis', 'Ad blocking']]) {
     const t = $('#t-' + k); const up = s[k] && s[k].up;
     if (k !== 'cerberus' && !s[k]) { t.classList.add('hidden'); continue; }   // not installed (yet)
     t.classList.remove('hidden');
@@ -807,7 +810,7 @@ async function loadStatus(){
     t.querySelector('.dot').className = 'dot ' + (up ? 'up' : 'down');
     t.querySelector('.st').textContent = up ? 'Running' : (s[k] && s[k].up ? `${k === 'apollo' ? 'Navidrome' : 'Jellyfin'} is down` : 'Not running');
   }
-  $('#svc').innerHTML = Object.entries(SVC_NAMES).filter(([k]) => !['mnemosyne', 'clio', 'aegis', 'athena'].includes(k) || s[k]).map(([k, n]) => `<div><span class="dot ${s[k] && s[k].up ? 'up' : 'down'}"></span><span class="n">${esc(n)}</span><span class="ms">${s[k] && s[k].up ? s[k].ms + ' ms' : 'down'}</span></div>`).join('');
+  $('#svc').innerHTML = Object.entries(SVC_NAMES).filter(([k]) => !['mnemosyne', 'clio', 'aegis', 'athena', 'hermes'].includes(k) || s[k]).map(([k, n]) => `<div><span class="dot ${s[k] && s[k].up ? 'up' : 'down'}"></span><span class="n">${esc(n)}</span><span class="ms">${s[k] && s[k].up ? s[k].ms + ' ms' : 'down'}</span></div>`).join('');
 }
 
 /* ---------- the PC ---------- */
@@ -1183,6 +1186,7 @@ const PHONE_HOW = {
   clio: 'Use the Audiobookshelf app, with this as the server address',
   aegis: 'Its admin page. Blocking itself starts once Tailscale DNS points to Aegis',
   athena: 'Open it, then ⋮ → Add to Home screen. Upload photos of letters from there',
+  hermes: 'Use the Nextcloud app, with this as the server address',
 };
 let setData = null;
 function qrSvg(text){

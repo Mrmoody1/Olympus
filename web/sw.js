@@ -1,5 +1,5 @@
 /* Olympus service worker: keeps the page itself on the phone so it opens instantly. */
-const SHELL = 'olympus-shell-2.1';
+const SHELL = 'olympus-shell-2.2';
 const SHARED = 'olympus-shared';   // films/songs shared from other phone apps, waiting for the page to upload them
 self.addEventListener('install', (e) => { e.waitUntil(caches.open(SHELL).then(c => c.addAll(['/', '/manifest.webmanifest', '/icon-192.png'])).then(() => self.skipWaiting())); });
 self.addEventListener('activate', (e) => { e.waitUntil((async () => { for (const k of await caches.keys()) if (k !== SHELL && k !== SHARED) await caches.delete(k); await self.clients.claim(); })()); });
