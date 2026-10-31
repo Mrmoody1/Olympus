@@ -779,6 +779,34 @@ def hestia_devices():
     return {"connected": True, "up": True, "devices": devices[:16]}
 
 
+# ---------- updates for the apps (through olympus-update, which runs as root via sudo) ----------
+UPDATER = os.environ.get("OLYMPUS_UPDATER", "/usr/local/bin/olympus-update")
+UPDATE_STATE = os.environ.get("OLYMPUS_UPDATE_STATE", "/var/lib/olympus-update")
+
+
+def updates_status():
+    try:
+        with open(os.path.join(UPDATE_STATE, "status.json")) as f:
+            d = json.load(f)
+    except (OSError, ValueError):
+        return {"setup": os.path.exists(UPDATER), "items": [], "checked": None}
+    try:
+        with open(os.path.join(UPDATE_STATE, "running.json")) as f:
+            d["running"] = json.load(f)
+    except (OSError, ValueError):
+        d["running"] = None
+    d["setup"] = True
+    return d
+
+
+def updater(*args, timeout=600):
+    cmd = [UPDATER, *args] if os.environ.get("OLYMPUS_UPDATER_NO_SUDO") else ["sudo", "-n", UPDATER, *args]
+    r = subprocess.run(cmd, capture_output=True, text=True, timeout=timeout)
+    if r.returncode != 0 and ("password is required" in r.stderr or "not allowed to execute" in r.stderr):
+        raise RestoreNotSetUp()
+    return r
+
+
 # ---------- web server ----------
 class Handler(http.server.SimpleHTTPRequestHandler):
     extensions_map = {**http.server.SimpleHTTPRequestHandler.extensions_map,
@@ -853,6 +881,8 @@ class Handler(http.server.SimpleHTTPRequestHandler):
             return self._json(aegis_summary())
         if self.path == "/api/hestia":
             return self._json(hestia_devices())
+        if self.path == "/api/updates":
+            return self._json(updates_status())
         if self.path == "/api/addresses":
             return self._json(addresses())
         if self.path == "/api/stats/bases":
@@ -881,6 +911,26 @@ class Handler(http.server.SimpleHTTPRequestHandler):
                 gf_call("POST", f"/api/v1/accounts/{body['id']}/balances",
                         {"balance": bal, "date": time.strftime("%Y-%m-%d")})
                 return self._json({"ok": True, "balance": bal})
+            except Exception as e:
+                return self._json({"ok": False, "error": str(e)[:200]})
+        if self.path in ("/api/updates/apply", "/api/updates/check"):
+            if not self._drop_allowed():
+                return
+            try:
+                body = json.loads(self.rfile.read(int(self.headers.get("Content-Length") or 0)) or b"{}")
+                if self.path == "/api/updates/check":
+                    updater("check", timeout=300)
+                    return self._json({"ok": True, **updates_status()})
+                key = str(body.get("key", ""))
+                known = {i["key"] for i in updates_status().get("items", [])}
+                if key != "all" and key not in known:
+                    raise ValueError("Unknown app")
+                r = updater("apply", key, timeout=60)
+                if "started" not in r.stdout:
+                    raise ValueError("The update didn't start")
+                return self._json({"ok": True})
+            except RestoreNotSetUp:
+                return self._json({"ok": False, "setup": True, "error": "Updating from Olympus isn't switched on yet"})
             except Exception as e:
                 return self._json({"ok": False, "error": str(e)[:200]})
         if self.path == "/api/hestia/toggle":

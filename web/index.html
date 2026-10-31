@@ -238,6 +238,16 @@ button.fo{width:100%;text-align:left;font:inherit;color:var(--text)}
 .htile.on{background:rgba(224,128,95,.12);border-color:rgba(224,128,95,.5)}
 .htile.on .ic{background:var(--accent);color:var(--accent-ink)}
 .htile:disabled{opacity:.6}
+.upbox{padding:12px 14px;border-radius:14px;background:var(--raised);border:1px solid var(--line-soft);display:flex;flex-direction:column;gap:8px;font-size:13px}
+.upbox.ready{border-color:rgba(224,128,95,.5);background:rgba(224,128,95,.08)}
+.upbox .uh{display:flex;align-items:center;gap:10px}
+.upbox .uh b{flex:1}
+.upbox .uh small{color:var(--muted);font-size:11px;font-weight:400;display:block}
+.upbox .ur{display:flex;align-items:center;gap:10px;font-size:12px;color:var(--soft)}
+.upbox .ur span{flex:1}
+.upbox button{height:30px;padding:0 12px;border-radius:999px;border:1px solid var(--line);color:var(--soft);font-size:12px}
+.upbox button.go{background:var(--accent);border-color:var(--accent);color:var(--accent-ink);font-weight:600}
+.ex.settings.has-updates .ic::after{content:"";position:absolute;top:6px;right:14px;width:9px;height:9px;border-radius:50%;background:var(--accent);border:2px solid var(--raised)}
 #disk{cursor:pointer}
 #disk:hover .l span:first-child{color:var(--text)}
 .app-tile{position:relative;display:flex;flex-direction:column;gap:14px;padding:20px;border-radius:18px;background:var(--panel);border:1px solid var(--line);min-height:190px;overflow:hidden;transition:border-color .15s,transform .15s}
@@ -559,6 +569,7 @@ footer button{color:var(--muted);text-decoration:underline}
     </div>
 
     <div class="spane" data-pane="apps" role="tabpanel">
+      <div class="upbox hidden" id="upBox"></div>
       <p class="note" id="appsNote">Checking…</p>
       <div class="slist" id="appsList"></div>
     </div>
@@ -1269,6 +1280,31 @@ async function paintBackups(){
   const where = [b.hdd || b.usb ? `backup drive ${(b.hdd || b.usb).ok ? '✓' : '✗'}` : '', b.koofr ? `Koofr ${b.koofr.ok ? '✓' : '✗'}` : ''].filter(Boolean).join(' · ');
   el.innerHTML = `<b>${b.ok === false ? 'The last backup had a problem' : 'All backed up'}</b><br>${when ? 'Last backup ' + esc(niceWhen(when)) : 'No backup yet'}${where ? ' · ' + esc(where) : ''}<br>Runs every night at 3am, and tells your phone if anything goes wrong.`;
 }
+let upPoll;
+async function paintUpdates(){
+  let u; try { u = await (await fetch('/api/updates')).json(); } catch { return; }
+  const ready = (u.items || []).filter(i => i.ready);
+  $('#x-settings').classList.toggle('has-updates', ready.length > 0);
+  const box = $('#upBox'); if (!box) return;
+  if (!u.setup) { box.classList.add('hidden'); return; }
+  box.classList.remove('hidden'); box.classList.toggle('ready', ready.length > 0);
+  const when = u.checked ? new Date(u.checked * 1000).toLocaleString('en-GB', { weekday: 'short', hour: '2-digit', minute: '2-digit' }) : 'not yet';
+  if (u.running) {
+    box.innerHTML = `<div class="uh"><span class="dot warn"></span><b>Updating ${esc(u.running.running === 'all' ? 'your apps' : ((u.items || []).find(i => i.key === u.running.running) || {}).name || u.running.running)}…<small>Each app restarts for a moment. You can close this.</small></b></div>`;
+    clearTimeout(upPoll); upPoll = setTimeout(paintUpdates, 5000); return;
+  }
+  box.innerHTML = ready.length
+    ? `<div class="uh"><span class="dot warn"></span><b>${ready.length} update${ready.length === 1 ? '' : 's'} ready<small>Downloaded overnight, so switching over is quick · checked ${esc(when)}</small></b><button type="button" class="go" data-up="all">Update all</button></div>
+       ${ready.map(i => `<div class="ur"><span>${esc(i.name)}${i.available ? ` · ${esc(i.current || '')} → ${esc(i.available)}` : ''}</span><button type="button" data-up="${esc(i.key)}">Update</button></div>`).join('')}`
+    : `<div class="uh"><span class="dot up"></span><b>Everything’s up to date<small>Checked ${esc(when)} · new versions download by themselves each night</small></b><button type="button" data-check>Check now</button></div>`;
+  box.querySelectorAll('[data-up]').forEach(b => b.onclick = async () => {
+    b.disabled = true;
+    try { await adminPost('/api/updates/apply', { key: b.dataset.up }); toast('Updating…'); setTimeout(paintUpdates, 1500); }
+    catch (e) { toast(e.message); b.disabled = false; }
+  });
+  const c = box.querySelector('[data-check]');
+  if (c) c.onclick = async () => { c.disabled = true; c.textContent = 'Checking…'; try { await adminPost('/api/updates/check', {}); } catch (e) { toast(e.message); } paintUpdates(); };
+}
 async function openAddresses(){
   $('#addrScrim').classList.remove('hidden'); $('#addrClose').focus();
   let tab = 'apps'; try { tab = localStorage.getItem('olympus.settingsTab') || 'apps'; } catch {}
@@ -1278,7 +1314,7 @@ async function openAddresses(){
     const srv = setData && (setData.apps.find(x => x.key === 'ntfy') || {}).remote;
     $('#setTopic').textContent = a.topic ? `Topic “${a.topic}”${srv ? ' on ' + srv : ''}${a.last ? ' · last sent ' + shortDate(a.last * 1000) : ''}` : 'Not set up';
   }).catch(() => {});
-  paintBackups();
+  paintBackups(); paintUpdates();
   $('#appsList').innerHTML = '<div class="note">Loading…</div>';
   try { setData = await (await fetch('/api/addresses')).json(); } catch { $('#appsNote').textContent = 'Couldn’t ask the PC just now.'; return; }
   $('#setPc').textContent = setData.host ? `${setData.host} on Tailscale` : 'Tailscale isn’t answering';
@@ -1655,7 +1691,7 @@ async function runSearch(q){
 let timers = [];
 function start(){
   $('#login').classList.add('hidden'); $('#app').classList.remove('hidden');
-  tickClock(); loadStatus(); loadSystem(); loadLive(); loadFresh(); paintChips(); loadAlerts(); loadBackup(); loadBalances(); loadAegis(); loadHome();
+  tickClock(); loadStatus(); loadSystem(); loadLive(); loadFresh(); paintChips(); loadAlerts(); loadBackup(); loadBalances(); loadAegis(); loadHome(); paintUpdates();
   setTimeout(() => { if (nav) snapshotIfNeeded().catch(() => {}); }, 8000);
   paintGetStarted();
   let seen = false; try { seen = !!store.get('tourSeen'); } catch {}
