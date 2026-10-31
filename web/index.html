@@ -55,6 +55,22 @@ header{display:flex;flex-wrap:wrap;align-items:flex-end;justify-content:space-be
 
 /* app tiles */
 .apps{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:16px}
+/* drop box under Theia */
+.droprow{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:16px;margin-top:-16px}
+.dropcol{grid-column:3;display:flex;flex-direction:column;gap:8px;min-width:0}
+.drop{position:relative;display:flex;align-items:center;gap:12px;padding:12px 16px;border-radius:14px;border:1.5px dashed var(--line);color:var(--soft);cursor:pointer;overflow:hidden;transition:border-color .15s,background .15s}
+.drop:hover,.drop:focus-visible,.drop.over{border-color:var(--accent);background:var(--hover);color:var(--text);outline:none}
+.drop .ic{flex:none;width:32px;height:32px;border-radius:10px;background:var(--cover);color:var(--accent);display:inline-flex;align-items:center;justify-content:center}
+.drop .tx{display:flex;flex-direction:column;min-width:0}
+.drop .tx b{font-size:13px;font-weight:600}
+.drop .tx small{font-size:11px;color:var(--muted);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.drop .bar{position:absolute;left:0;bottom:0;height:3px;width:0;background:var(--accent);transition:width .2s}
+.drop.busy{cursor:default}
+.dropres{font-size:12px;line-height:1.55;color:var(--soft);padding:10px 14px;border-radius:12px;background:var(--panel);border:1px solid var(--line-soft)}
+.dropres div{white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.dropres .ok{color:var(--text)}
+.dropres .left{color:var(--muted)}
+.dropres button{margin-top:6px;background:none;border:0;padding:0;color:var(--muted);font:inherit;text-decoration:underline;cursor:pointer}
 /* extras: a slim rail on the left (desktop), a row of pills under the tiles (phone) */
 #app{padding-left:88px}
 .extras{position:fixed;z-index:5;left:0;top:0;bottom:0;width:88px;padding:max(24px,env(safe-area-inset-top)) 0 24px;border-right:1px solid var(--line-soft);background:var(--raised);display:flex;flex-direction:column;align-items:center;gap:6px}
@@ -225,6 +241,8 @@ footer button{color:var(--muted);text-decoration:underline}
   button.ex{border:1px solid var(--line);background:var(--raised)}
   .flyout{left:0;top:calc(100% + 8px);width:min(290px,calc(100vw - 32px))}
   .apps{grid-template-columns:minmax(0,1fr)}
+  .droprow{grid-template-columns:minmax(0,1fr);margin-top:-16px}
+  .dropcol{grid-column:1}
   .app-tile{min-height:0;flex-direction:row;flex-wrap:wrap;align-items:center;gap:12px 14px;padding:16px}
   .app-tile .top{display:contents}
   .app-tile .ic{width:48px;height:48px}
@@ -296,6 +314,18 @@ footer button{color:var(--muted);text-decoration:underline}
       </a>
     </section>
 
+    <div class="droprow">
+      <div class="dropcol">
+        <div class="drop" id="drop" role="button" tabindex="0" aria-describedby="dropHint">
+          <span class="ic" data-icon="upload"></span>
+          <span class="tx"><b id="dropTitle">Drop films or music here</b><small id="dropHint">or click to choose · filed for you</small></span>
+          <span class="bar" id="dropBar"></span>
+          <input type="file" id="dropPick" multiple hidden>
+        </div>
+        <div class="dropres hidden" id="dropRes" aria-live="polite"></div>
+      </div>
+    </div>
+
     <nav class="extras" aria-label="Extras">
       <h3>Extras</h3>
       <div class="exg">
@@ -359,6 +389,7 @@ const ICONS = {
   heart: P('<path d="M12 21s-7-4.5-9-9a5 5 0 0 1 9-3 5 5 0 0 1 9 3c-2 4.5-9 9-9 9z"/>'),
   play: P('<path d="M7 4l13 8-13 8z"/>'),
   dl: P('<path d="M12 4v11M7 10l5 5 5-5M5 20h14"/>'),
+  upload: P('<path d="M12 16V4M7 9l5-5 5 5M5 20h14"/>'),
   scan: P('<path d="M3 12a9 9 0 1 0 3-6.7L3 8M3 3v5h5"/>'),
   chat: P('<path d="M4 5h16v11H9l-5 4z"/>'),
   list: P('<path d="M4 6h16M4 12h16M4 18h10"/>'),
@@ -696,6 +727,100 @@ function paintChips(){
     toast(done.length ? `Scanning ${done.join(' and ')} for anything new` : "Couldn't start a scan (needs an admin account)");
   };
 }
+
+/* ---------- drop box: films and music go to the PC's inbox and get filed ---------- */
+(() => {
+  const box = $('#drop'), pick = $('#dropPick'), bar = $('#dropBar'), res = $('#dropRes');
+  const title = $('#dropTitle'), hint = $('#dropHint');
+  const TYPES = /\.(mkv|mp4|m4v|avi|mov|webm|wmv|ts|mpe?g|flv|mp3|flac|m4a|aac|ogg|oga|opus|wav|wma|aiff?|ape|wv|srt|ass|ssa|vtt|sub|idx|jpe?g|png|webp)$/i;
+  let busy = false;
+  const reset = () => { title.textContent = 'Drop films or music here'; hint.textContent = 'or click to choose · filed for you'; bar.style.width = '0'; box.classList.remove('busy'); busy = false; };
+  // 'movies/Alien (1979)/Alien (1979).mkv' -> 'Film · Alien (1979)'; music paths -> 'Music · Artist · Album · Song'
+  const nice = (path) => {
+    const p = path.split('/'), stem = (f) => f.replace(/\.[^.]+$/, '');
+    if (p[0] === 'movies') return `Film · ${p[1]}`;
+    if (p[0] === 'shows') return `Episode · ${stem(p[p.length - 1])}`;
+    return `Music · ${p[0]} · ${p[1]} · ${stem(p[p.length - 1]).replace(/^\d+(-\d+)? /, '')}`;
+  };
+  const auth = () => nav ? { 'X-Nav-U': nav.u, 'X-Nav-T': nav.t, 'X-Nav-S': nav.s } : {};
+  const show = (rows) => {
+    res.innerHTML = rows.map(([cls, text]) => `<div class="${cls}" title="${esc(text)}">${esc(text)}</div>`).join('') + '<button type="button" id="dropClose">Hide</button>';
+    res.classList.remove('hidden');
+    $('#dropClose').onclick = () => res.classList.add('hidden');
+  };
+  // Folders dropped in keep their inside layout (an album folder, a show's seasons…)
+  async function walk(entry, path, out){
+    if (entry.isFile) { const f = await new Promise((ok, no) => entry.file(ok, no)); out.push({ file: f, path: path + f.name }); return; }
+    const reader = entry.createReader(); let batch;
+    do { batch = await new Promise((ok, no) => reader.readEntries(ok, no)); for (const e of batch) await walk(e, path + entry.name + '/', out); } while (batch.length);
+  }
+  function put(item, onProgress){
+    return new Promise((resolve) => {
+      const x = new XMLHttpRequest();
+      x.open('PUT', '/api/inbox/upload?path=' + encodeURIComponent(item.path));
+      for (const [k, v] of Object.entries(auth())) x.setRequestHeader(k, v);
+      x.upload.onprogress = (e) => onProgress(e.loaded);
+      x.onload = () => resolve({ ok: x.status === 200, status: x.status, msg: (x.responseText.match(/<p>Message: ([^<]+)/) || [])[1] || x.statusText });
+      x.onerror = () => resolve({ ok: false, status: 0, msg: 'the connection dropped' });
+      x.send(item.file);
+    });
+  }
+  async function go(items){
+    if (busy) return;
+    if (!nav) { show([['left', 'Sign in to Olympus first.']]); return; }
+    const skipped = items.filter(i => !TYPES.test(i.file.name));
+    items = items.filter(i => TYPES.test(i.file.name));
+    if (!items.length) { show([['left', skipped.length ? "Those aren't film or music files." : 'Nothing to add.']]); return; }
+    busy = true; box.classList.add('busy'); res.classList.add('hidden');
+    const total = items.reduce((n, i) => n + i.file.size, 0) || 1;
+    let done = 0; const rows = [];
+    for (const [n, item] of items.entries()) {
+      title.textContent = `Uploading ${n + 1} of ${items.length}`;
+      const r = await put(item, (loaded) => {
+        const pct = Math.min(100, Math.round((done + loaded) / total * 100));
+        bar.style.width = pct + '%'; hint.textContent = `${pct}% · ${item.file.name}`;
+      });
+      done += item.file.size;
+      if (!r.ok) {
+        rows.push(['left', `✗ ${item.file.name}: ${r.status === 401 ? 'only the Navidrome admin account can add files' : r.msg}`]);
+        if (r.status === 401 || r.status === 403 || r.status === 507) break;
+      }
+    }
+    title.textContent = 'Filing…'; hint.textContent = 'naming them and putting them in the right place'; bar.style.width = '100%';
+    try {
+      const r = await fetch('/api/inbox/file', { method: 'POST', headers: auth() });
+      const j = r.ok ? await r.json() : { lines: [] };
+      for (const l of j.lines || []) {
+        if (l.startsWith('✓ Filed ')) rows.push(['ok', '✓ ' + nice(l.slice(8))]);
+        else if (l.startsWith('· Left in inbox: ')) rows.push(['left', '· ' + l.slice(17)]);
+      }
+    } catch { rows.push(['left', "Couldn't file them just now. They'll be filed within 5 minutes."]); }
+    if (skipped.length) rows.push(['left', skipped.length === 1 ? `· Skipped ${skipped[0].file.name}: not a film or music` : `· Skipped ${skipped.length} files that aren't films or music`]);
+    if (!rows.some(r => r[0] === 'ok') && !rows.length) rows.push(['left', 'Nothing new was filed.']);
+    // Tell the libraries straight away so they show up in a minute
+    if (rows.some(r => r[0] === 'ok')) {
+      try { await navApi('startScan'); } catch {}
+      if (jfa) { try { await jf('/Library/Refresh', { method: 'POST' }); } catch {} }
+      toast('Added. They’ll appear in Apollo and Theia in a minute or two.');
+    }
+    show(rows); reset();
+  }
+  box.addEventListener('click', () => { if (!busy) pick.click(); });
+  box.addEventListener('keydown', (e) => { if ((e.key === 'Enter' || e.key === ' ') && !busy) { e.preventDefault(); pick.click(); } });
+  pick.addEventListener('change', () => { go([...pick.files].map(f => ({ file: f, path: f.name }))); pick.value = ''; });
+  ['dragenter', 'dragover'].forEach(ev => box.addEventListener(ev, (e) => { e.preventDefault(); if (!busy) box.classList.add('over'); }));
+  ['dragleave', 'drop'].forEach(ev => box.addEventListener(ev, () => box.classList.remove('over')));
+  box.addEventListener('drop', async (e) => {
+    e.preventDefault();
+    const out = [];
+    const entries = [...e.dataTransfer.items].map(i => i.webkitGetAsEntry && i.webkitGetAsEntry()).filter(Boolean);
+    if (entries.length) { for (const en of entries) await walk(en, '', out); }
+    else out.push(...[...e.dataTransfer.files].map(f => ({ file: f, path: f.name })));
+    go(out);
+  });
+  // A file dropped anywhere else on the page shouldn't make the browser open it
+  ['dragover', 'drop'].forEach(ev => window.addEventListener(ev, (e) => { if (!box.contains(e.target)) e.preventDefault(); }));
+})();
 
 /* ---------- search across everything ---------- */
 let searchT, searchSeq = 0;

@@ -15,6 +15,8 @@ Settings (environment variables):
   NTFY_URL        where ntfy runs (Odysseus's)      (default http://127.0.0.1:8091)
   NTFY_TOPIC      the topic your phone subscribes to (default olympus)
   NTFY_TOKEN      access token, only if your ntfy needs one
+  THEIA_DIR       where Theia is installed (for the inbox)  (default ~/theia)
+  APOLLO_DIR      where Apollo is installed (for the inbox) (default ~/apollo)
 """
 import glob
 import http.server
@@ -25,7 +27,9 @@ import subprocess
 import threading
 import time
 import urllib.error
+import urllib.parse
 import urllib.request
+import uuid
 
 PORT = int(os.environ.get("OLYMPUS_PORT", "8097"))
 WEB_DIR = os.path.join(os.path.dirname(os.path.abspath(__file__)), "web")
@@ -296,6 +300,82 @@ def watcher():
         time.sleep(60)
 
 
+# ---------- drop box: upload films and music into the inbox, then file them ----------
+INBOX = os.path.join(MEDIA, "inbox")
+UPLOADING = os.path.join(INBOX, ".uploading")
+TIDY_SCRIPTS = [
+    os.path.join(os.path.expanduser(os.environ.get("THEIA_DIR", "~/theia")), "tidy.py"),
+    os.path.join(os.path.expanduser(os.environ.get("APOLLO_DIR", "~/apollo")), "tidy-music.py"),
+]
+DROP_TYPES = {".mkv", ".mp4", ".m4v", ".avi", ".mov", ".webm", ".wmv", ".ts", ".mpg", ".mpeg", ".flv",
+              ".mp3", ".flac", ".m4a", ".aac", ".ogg", ".oga", ".opus", ".wav", ".wma", ".aiff", ".aif", ".ape", ".wv",
+              ".srt", ".ass", ".ssa", ".vtt", ".sub", ".idx", ".jpg", ".jpeg", ".png", ".webp"}
+_admins = {}   # (u, t, s) -> time it was checked
+
+
+def is_admin(u, t, s):
+    """True if these Navidrome login details belong to an admin (checked with Navidrome itself)."""
+    if not (u and t and s):
+        return False
+    key = (u, t, s)
+    if time.time() - _admins.get(key, 0) < 600:
+        return True
+    q = urllib.parse.urlencode({"u": u, "t": t, "s": s, "v": "1.16.1", "c": "olympus", "f": "json", "username": u})
+    try:
+        with urllib.request.urlopen(f"{BACKENDS['/nav/']}/rest/getUser.view?{q}", timeout=8) as r:
+            resp = json.load(r).get("subsonic-response", {})
+        ok = resp.get("status") == "ok" and resp.get("user", {}).get("adminRole") is True
+    except Exception:
+        ok = False
+    if ok:
+        _admins[key] = time.time()
+    return ok
+
+
+def safe_relpath(raw):
+    """Turn 'Album/CD1/01 Song.flac' from the browser into a safe path inside the inbox, or None."""
+    parts = []
+    for part in urllib.parse.unquote(raw or "").replace("\\", "/").split("/"):
+        part = part.strip()
+        if part in ("", "."):
+            continue
+        if part.startswith("."):                                # "..", hidden files and folders: refuse
+            return None
+        part = "".join(c for c in part if c >= " " and c not in '<>:"|?*').strip().rstrip(".")
+        if not part:
+            return None
+        parts.append(part[:150])
+    if not parts or len(parts) > 5 or os.path.splitext(parts[-1])[1].lower() not in DROP_TYPES:
+        return None
+    return os.path.join(*parts)
+
+
+def clear_stale_uploads():
+    try:
+        for f in os.listdir(UPLOADING):
+            fp = os.path.join(UPLOADING, f)
+            if time.time() - os.path.getmtime(fp) > 86400:
+                os.remove(fp)
+    except OSError:
+        pass
+
+
+def run_tidy():
+    """File what's in the inbox now (films with Theia's script, music with Apollo's). Returns their output lines."""
+    lines = []
+    env = {**os.environ, "NTFY_URL": NTFY_URL, "NTFY_TOPIC": NTFY_TOPIC, "NTFY_TOKEN": NTFY_TOKEN}
+    for script in TIDY_SCRIPTS:
+        if not os.path.exists(script):
+            continue
+        try:
+            out = subprocess.run(["python3", script, "--media", MEDIA, "--quiet"], capture_output=True,
+                                 text=True, timeout=900, env=env)
+            lines += [l for l in (out.stdout + out.stderr).splitlines() if l.strip()]
+        except Exception as e:
+            lines.append(f"· {os.path.basename(script)} had a problem: {str(e)[:120]}")
+    return lines
+
+
 # ---------- web server ----------
 class Handler(http.server.SimpleHTTPRequestHandler):
     extensions_map = {**http.server.SimpleHTTPRequestHandler.extensions_map,
@@ -381,12 +461,72 @@ class Handler(http.server.SimpleHTTPRequestHandler):
                 return self._json({"ok": True, "balance": bal})
             except Exception as e:
                 return self._json({"ok": False, "error": str(e)[:200]})
+        if self.path == "/api/inbox/file":
+            if not self._drop_allowed():
+                return
+            self.rfile.read(int(self.headers.get("Content-Length") or 0))
+            return self._json({"ok": True, "lines": run_tidy()})
         if self.path == "/api/alerts/test":
             ok = notify("Test from Olympus", "Phone alerts are working.", "tada")
             return self._json({"ok": ok, "topic": NTFY_TOPIC})
         if self._backend():
             return self._proxy()
         self.send_error(405)
+
+    def _drop_allowed(self):
+        # Only from this PC itself or via Tailscale (which arrives from 127.0.0.1), and only the Navidrome admin.
+        if self.client_address[0] not in ("127.0.0.1", "::1", "::ffff:127.0.0.1"):
+            self.send_error(403, "Uploads only work on this PC or over Tailscale")
+            return False
+        h = self.headers
+        if not is_admin(h.get("X-Nav-U", ""), h.get("X-Nav-T", ""), h.get("X-Nav-S", "")):
+            self.send_error(401, "Sign in to Olympus with the Navidrome admin account to add files")
+            return False
+        return True
+
+    def do_PUT(self):
+        if not self.path.startswith("/api/inbox/upload?"):
+            self.send_error(405)
+            return
+        if not self._drop_allowed():
+            return
+        rel = safe_relpath(urllib.parse.parse_qs(urllib.parse.urlsplit(self.path).query).get("path", [""])[0])
+        length = int(self.headers.get("Content-Length") or -1)
+        if rel is None:
+            self.send_error(415, "Only films, music, subtitles and cover pictures can go in the inbox")
+            return
+        if length < 0:
+            self.send_error(411)
+            return
+        dst = os.path.join(INBOX, rel)
+        if os.path.exists(dst):
+            self.send_error(409, "That file is already in the inbox")
+            return
+        os.makedirs(UPLOADING, exist_ok=True)
+        clear_stale_uploads()
+        if shutil.disk_usage(INBOX).free < length + 2 * 1024 ** 3:
+            self.send_error(507, "Not enough space on the PC")
+            return
+        part = os.path.join(UPLOADING, uuid.uuid4().hex + ".part")
+        try:
+            with open(part, "wb") as f:
+                left = length
+                while left > 0:
+                    chunk = self.rfile.read(min(1024 * 1024, left))
+                    if not chunk:
+                        raise ConnectionError("upload stopped part-way")
+                    f.write(chunk)
+                    left -= len(chunk)
+            os.makedirs(os.path.dirname(dst), exist_ok=True)
+            os.replace(part, dst)
+            old = time.time() - 600          # it's complete, so the inbox scripts can file it straight away
+            os.utime(dst, (old, old))
+        except Exception as e:
+            try: os.remove(part)
+            except OSError: pass
+            self.send_error(500, str(e)[:100])
+            return
+        return self._json({"ok": True, "path": rel})
 
     def _proxy(self):
         length = int(self.headers.get("Content-Length") or 0)
