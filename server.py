@@ -531,6 +531,63 @@ def save_snapshot(counts):
     return True
 
 
+# ---------- addresses: every app, on this PC and over Tailscale (read from Tailscale itself) ----------
+ADDRESS_APPS = [  # key, name, what it is, local URL
+    ("olympus", "Olympus", "Home screen", f"http://127.0.0.1:{PORT}"),
+    ("apollo", "Apollo", "Music", SERVICES["apollo"]),
+    ("theia", "Theia", "Films & shows", SERVICES["theia"]),
+    ("odysseus", "Odysseus", "AI workspace", SERVICES["odysseus"]),
+    ("cerberus", "Cerberus", "Passwords", os.environ.get("CERBERUS_URL", "http://127.0.0.1:8222")),
+    ("budget", "Plutus budget", "Budget", os.environ.get("BUDGET_URL", "http://127.0.0.1:5006")),
+    ("investments", "Plutus investments", "Investments", os.environ.get("INVESTMENTS_URL", "http://127.0.0.1:3333")),
+    ("navidrome", "Navidrome", "Music library admin (this PC)", BACKENDS["/nav/"]),
+    ("jellyfin", "Jellyfin", "Film library admin (this PC)", BACKENDS["/jf/"]),
+    ("ntfy", "ntfy", "Phone alerts server", NTFY_URL),
+]
+TS_DEFAULTS = {"olympus": 9443, "apollo": 443, "theia": 8443, "odysseus": 10000, "cerberus": int(CERBERUS_TS_PORT),
+               "budget": 5443, "investments": 3443}
+_addr = {"at": 0, "v": None}
+
+
+def _port(url):
+    m = re.search(r":(\d+)", url.split("//", 1)[-1])
+    return int(m.group(1)) if m else 80
+
+
+def served_ports():
+    """{local port: tailscale https port} from `tailscale serve status`, or None if it can't be read."""
+    try:
+        out = subprocess.run(["tailscale", "serve", "status", "--json"], capture_output=True, text=True, timeout=5)
+        data = json.loads(out.stdout or "null")
+    except Exception:
+        return None
+    if not isinstance(data, dict):
+        return None
+    found = {}
+    for hostport, conf in (data.get("Web") or {}).items():
+        ts_port = int(hostport.rsplit(":", 1)[-1])
+        for h in (conf.get("Handlers") or {}).values():
+            proxy = h.get("Proxy") or ""
+            m = re.search(r":(\d+)/?$", proxy) or re.fullmatch(r"(\d+)", proxy)
+            if m:
+                found[int(m.group(1))] = ts_port
+    return found
+
+
+def addresses():
+    if _addr["v"] and time.time() - _addr["at"] < 60:
+        return _addr["v"]
+    host, served = ts_host(), served_ports()
+    rows = []
+    for key, name, what, url in ADDRESS_APPS:
+        local_port = _port(url)
+        ts_port = served.get(local_port) if served is not None else TS_DEFAULTS.get(key)
+        rows.append({"key": key, "name": name, "what": what, "local": f"http://localhost:{local_port}",
+                     "remote": (f"https://{host}" + ("" if ts_port == 443 else f":{ts_port}")) if host and ts_port else None})
+    _addr["v"], _addr["at"] = {"host": host, "fromTailscale": served is not None, "apps": rows}, time.time()
+    return _addr["v"]
+
+
 # ---------- web server ----------
 class Handler(http.server.SimpleHTTPRequestHandler):
     extensions_map = {**http.server.SimpleHTTPRequestHandler.extensions_map,
@@ -594,6 +651,8 @@ class Handler(http.server.SimpleHTTPRequestHandler):
             items = sorted(_cleared(), key=lambda i: -i["at"])
             return self._json({"items": [{**i, "from": os.path.relpath(i["from"], MEDIA),
                                           "deleteOn": i["at"] + KEEP_CLEARED_DAYS * 86400} for i in items]})
+        if self.path == "/api/addresses":
+            return self._json(addresses())
         if self.path == "/api/stats/bases":
             return self._json(stats_bases())
         if self.path == "/api/alerts":
