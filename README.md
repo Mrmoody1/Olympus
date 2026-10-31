@@ -166,3 +166,7 @@ The Plutus balance screen saves to Ghostfolio through its API. It only accepts c
 ## Licence
 
 All rights reserved. Private, not open source. See [LICENSE](LICENSE).
+
+## Third-party code
+
+`web/qrcode.js` is [QR Code Generator for JavaScript](https://github.com/kazuhikoarase/qrcode-generator) by Kazuhiko Arase, MIT licence (copyright notice kept in the file). It draws the QR codes in Settings › Phone.

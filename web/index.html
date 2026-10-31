@@ -167,6 +167,34 @@ button.fo{width:100%;text-align:left;font:inherit;color:var(--text)}
 .srow.dir .t b:hover{color:var(--accent)}
 .rdone{padding:12px 14px;border-radius:12px;background:var(--raised);border:1px solid var(--line-soft);font-size:12px;line-height:1.6}
 .rdone code{color:var(--text)}
+.sheet.settings{width:min(680px,100%);height:min(720px,calc(100vh - 32px))}
+.stabs{display:flex;gap:6px;padding:4px;border-radius:14px;background:var(--raised);border:1px solid var(--line-soft)}
+.stabs button{flex:1;display:flex;align-items:center;justify-content:center;gap:8px;height:38px;border-radius:10px;color:var(--soft);font-size:13px}
+.stabs button:hover{color:var(--text)}
+.stabs button[aria-selected="true"]{background:var(--panel);color:var(--text);box-shadow:0 1px 0 var(--line)}
+.stabs button[aria-selected="true"] svg{color:var(--accent)}
+.spane{display:flex;flex-direction:column;gap:12px}
+.approw{display:flex;align-items:center;gap:12px;padding:10px 0;border-bottom:1px solid var(--line-soft);flex-wrap:wrap}
+.approw:last-child{border-bottom:0}
+.approw .t{flex:1;min-width:140px;display:flex;flex-direction:column;gap:2px}
+.approw .t b{font-size:14px;font-weight:600}
+.approw .t small{font-size:11px;color:var(--muted)}
+.approw .acts{display:flex;gap:6px}
+.approw .acts a,.approw .acts button{height:30px;padding:0 12px;border-radius:999px;border:1px solid var(--line);color:var(--soft);font-size:12px;display:inline-flex;align-items:center;text-decoration:none}
+.approw .acts a.go{background:var(--accent);border-color:var(--accent);color:var(--accent-ink);font-weight:600}
+.approw .acts a:hover,.approw .acts button:hover{border-color:var(--accent);color:var(--text)}
+.approw .acts a.go:hover{color:var(--accent-ink);filter:brightness(1.08)}
+.approw .more{flex-basis:100%;display:flex;flex-direction:column;gap:6px;padding:4px 0 2px 21px}
+.approw .dot{flex:none}
+.qrgrid{display:grid;grid-template-columns:repeat(auto-fill,minmax(180px,1fr));gap:12px}
+.qrcard{display:flex;flex-direction:column;align-items:center;gap:8px;padding:14px 12px;border-radius:14px;background:var(--raised);border:1px solid var(--line-soft);text-align:center}
+.qrcard .qr{width:132px;height:132px;padding:8px;border-radius:10px;background:#fff}
+.qrcard .qr svg{width:100%;height:100%;display:block}
+.qrcard b{font-size:14px}
+.qrcard small{font-size:11px;line-height:1.5;color:var(--muted)}
+.bksum{padding:12px 14px;border-radius:12px;background:var(--raised);border:1px solid var(--line-soft);font-size:12px;line-height:1.6;color:var(--soft)}
+.bksum b{color:var(--text)}
+@media (max-width: 520px){ .stabs button{flex-direction:column;gap:2px;height:52px;font-size:11px} }
 #disk{cursor:pointer}
 #disk:hover .l span:first-child{color:var(--text)}
 .app-tile{position:relative;display:flex;flex-direction:column;gap:14px;padding:20px;border-radius:18px;background:var(--panel);border:1px solid var(--line);min-height:190px;overflow:hidden;transition:border-color .15s,transform .15s}
@@ -462,19 +490,39 @@ footer button{color:var(--muted);text-decoration:underline}
 </div>
 
 <div class="scrim hidden" id="addrScrim">
-  <div class="sheet wide" id="addrSheet" role="dialog" aria-modal="true" aria-labelledby="addrTitle">
+  <div class="sheet wide settings" id="addrSheet" role="dialog" aria-modal="true" aria-labelledby="addrTitle">
     <button class="x" type="button" id="addrClose" aria-label="Close"><span data-icon="close"></span></button>
     <h2 id="addrTitle">Settings</h2>
-    <h4>Addresses</h4>
-    <p class="note" id="addrSub">Checking…</p>
-    <div class="slist" id="addrList"></div>
-    <p class="note">“Anywhere” addresses work on any of your devices with Tailscale switched on. “On this PC” only works on the PC itself.</p>
-    <h4>Phone alerts</h4>
-    <div class="srow"><span class="t"><b>ntfy topic</b><small id="setTopic">…</small></span><button type="button" id="setTest">Send a test</button></div>
-    <h4>Backups</h4>
-    <div class="srow"><span class="t"><b>Restore files</b><small>Get back anything from your music, films, photos or home folder</small></span><button type="button" id="setRestore">Restore…</button></div>
-    <h4>This device</h4>
-    <div class="srow"><span class="t"><b id="setWho">Signed in</b><small>Olympus remembers your music and films accounts on this device</small></span><button type="button" id="setOut">Sign out</button></div>
+    <div class="stabs" role="tablist" aria-label="Settings sections">
+      <button type="button" role="tab" data-tab="apps" aria-selected="true"><span data-icon="grid"></span>Apps</button>
+      <button type="button" role="tab" data-tab="phone" aria-selected="false"><span data-icon="phone"></span>Phone</button>
+      <button type="button" role="tab" data-tab="backups" aria-selected="false"><span data-icon="restore"></span>Backups</button>
+      <button type="button" role="tab" data-tab="account" aria-selected="false"><span data-icon="user"></span>Account</button>
+    </div>
+
+    <div class="spane" data-pane="apps" role="tabpanel">
+      <p class="note" id="appsNote">Checking…</p>
+      <div class="slist" id="appsList"></div>
+    </div>
+
+    <div class="spane hidden" data-pane="phone" role="tabpanel">
+      <p class="note">With Tailscale on, point your phone's camera at a code to open that app. Then follow the line under it to keep it on your phone.</p>
+      <div class="qrgrid" id="qrGrid"></div>
+      <h4>Phone alerts</h4>
+      <div class="srow"><span class="t"><b>ntfy app</b><small id="setTopic">…</small></span><button type="button" id="setTest">Send a test</button></div>
+    </div>
+
+    <div class="spane hidden" data-pane="backups" role="tabpanel">
+      <div class="bksum" id="setBk"><div class="note">Checking…</div></div>
+      <div class="srow"><span class="t"><b>Restore files</b><small>Get back anything from your music, films, photos or home folder</small></span><button type="button" id="setRestore">Restore…</button></div>
+      <div class="srow"><span class="t"><b>Storage</b><small>What's using the space, and clearing out what you've watched</small></span><button type="button" id="setStorage">Open</button></div>
+    </div>
+
+    <div class="spane hidden" data-pane="account" role="tabpanel">
+      <div class="srow"><span class="t"><b id="setWho">Signed in</b><small>Olympus remembers your music and films accounts on this device</small></span><button type="button" id="setOut">Sign out</button></div>
+      <div class="srow"><span class="t"><b>This PC</b><small id="setPc">…</small></span></div>
+      <div class="srow"><span class="t"><b>Olympus</b><small id="setVer">…</small></span></div>
+    </div>
   </div>
 </div>
 
@@ -492,6 +540,7 @@ footer button{color:var(--muted);text-decoration:underline}
 
 <div class="toast" id="toast" role="status"></div>
 
+<script src="/qrcode.js"></script>
 <script>
 (() => {
 'use strict';
@@ -507,6 +556,9 @@ const ICONS = {
   play: P('<path d="M7 4l13 8-13 8z"/>'),
   dl: P('<path d="M12 4v11M7 10l5 5 5-5M5 20h14"/>'),
   gear: P('<circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.7 1.7 0 0 0 .3 1.8l.1.1a2 2 0 1 1-2.8 2.8l-.1-.1a1.7 1.7 0 0 0-1.8-.3 1.7 1.7 0 0 0-1 1.5V21a2 2 0 1 1-4 0v-.1a1.7 1.7 0 0 0-1.1-1.5 1.7 1.7 0 0 0-1.8.3l-.1.1a2 2 0 1 1-2.8-2.8l.1-.1a1.7 1.7 0 0 0 .3-1.8 1.7 1.7 0 0 0-1.5-1H3a2 2 0 1 1 0-4h.1a1.7 1.7 0 0 0 1.5-1.1 1.7 1.7 0 0 0-.3-1.8l-.1-.1a2 2 0 1 1 2.8-2.8l.1.1a1.7 1.7 0 0 0 1.8.3H9a1.7 1.7 0 0 0 1-1.5V3a2 2 0 1 1 4 0v.1a1.7 1.7 0 0 0 1 1.5 1.7 1.7 0 0 0 1.8-.3l.1-.1a2 2 0 1 1 2.8 2.8l-.1.1a1.7 1.7 0 0 0-.3 1.8V9a1.7 1.7 0 0 0 1.5 1H21a2 2 0 1 1 0 4h-.1a1.7 1.7 0 0 0-1.5 1z"/>'),
+  grid: P('<rect x="3" y="3" width="7" height="7" rx="1.5"/><rect x="14" y="3" width="7" height="7" rx="1.5"/><rect x="3" y="14" width="7" height="7" rx="1.5"/><rect x="14" y="14" width="7" height="7" rx="1.5"/>'),
+  phone: P('<rect x="7" y="2" width="10" height="20" rx="2"/><path d="M11 18h2"/>'),
+  user: P('<circle cx="12" cy="8" r="4"/><path d="M4 21a8 8 0 0 1 16 0"/>'),
   folder: P('<path d="M3 7a2 2 0 0 1 2-2h4l2 2h8a2 2 0 0 1 2 2v8a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/>'),
   file: P('<path d="M14 3H7a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2V8z"/><path d="M14 3v5h5"/>'),
   restore: P('<path d="M3 12a9 9 0 1 0 3-6.7L3 8"/><path d="M3 3v5h5M12 7v5l3 2"/>'),
@@ -1024,37 +1076,99 @@ document.querySelectorAll('#statSheet .tabs button').forEach(b => b.addEventList
   paintStats();
 }));
 
-/* ---------- addresses ---------- */
+/* ---------- settings ---------- */
 async function copyText(text, btn){
   try { await navigator.clipboard.writeText(text); }
   catch { const t = document.createElement('textarea'); t.value = text; document.body.appendChild(t); t.select(); document.execCommand('copy'); t.remove(); }
   const was = btn.textContent; btn.textContent = 'Copied'; setTimeout(() => { btn.textContent = was; }, 1500);
 }
-async function openAddresses(){
-  $('#addrScrim').classList.remove('hidden'); $('#addrClose').focus();
-  $('#setWho').textContent = nav ? `Signed in as ${nav.name || nav.u}` : 'Signed in';
-  fetch('/api/alerts').then(r => r.json()).then(a => { $('#setTopic').textContent = a.topic ? `${a.topic}${a.last ? ' · last sent ' + shortDate(a.last * 1000) : ''}` : 'Not set up'; }).catch(() => {});
-  let j; try { j = await (await fetch('/api/addresses')).json(); } catch { $('#addrSub').textContent = 'Couldn’t ask the PC just now.'; return; }
-  $('#addrSub').textContent = j.host ? `This PC on Tailscale: ${j.host}` : 'Tailscale isn’t answering on the PC, so only the on-this-PC addresses are shown.';
-  const list = $('#addrList'); list.innerHTML = '';
-  for (const a of j.apps) {
-    const row = document.createElement('div'); row.className = 'arow';
-    const line = (k, url, offText) => `<div class="aline"><span class="k">${k}</span>${url ? `<a href="${esc(url)}/" target="_blank" rel="noopener">${esc(url)}</a><button type="button" data-copy="${esc(url)}">Copy</button>` : `<span class="off">${offText}</span>`}</div>`;
-    const phoneOff = /this PC|alerts/.test(a.what) ? 'This PC only' : 'Not set up for other devices';
-    row.innerHTML = `<div class="n"><b>${esc(a.name)}</b><small>${esc(a.what)}</small></div>${line('Anywhere', a.remote, phoneOff)}${line('On this PC', a.local)}`;
+// How to keep each app on a phone
+const PHONE_HOW = {
+  olympus: 'Open it, then ⋮ → Add to Home screen → Install',
+  apollo: 'Open it, then ⋮ → Add to Home screen → Install',
+  theia: 'Open it, then ⋮ → Add to Home screen → Install',
+  odysseus: 'Open it, then ⋮ → Add to Home screen',
+  budget: 'Open it, then ⋮ → Add to Home screen → Install',
+  investments: 'Open it, then ⋮ → Add to Home screen → Install',
+  cerberus: 'Use the Bitwarden app: Self-hosted, with this as the server',
+  mnemosyne: 'Use the Immich app, with this as the server address',
+};
+let setData = null;
+function qrSvg(text){
+  try { const q = qrcode(0, 'M'); q.addData(text); q.make(); return q.createSvgTag({ cellSize: 4, margin: 0, scalable: true }); }
+  catch { return ''; }
+}
+function setTab(name){
+  document.querySelectorAll('#addrSheet .stabs button').forEach(b => b.setAttribute('aria-selected', String(b.dataset.tab === name)));
+  document.querySelectorAll('#addrSheet .spane').forEach(p => p.classList.toggle('hidden', p.dataset.pane !== name));
+  try { localStorage.setItem('olympus.settingsTab', name); } catch {}
+  if (name === 'phone') paintPhone();
+}
+function paintApps(st){
+  const j = setData; const list = $('#appsList'); list.innerHTML = '';
+  $('#appsNote').textContent = viaTailscale ? 'You’re on Tailscale, so Open uses the “anywhere” address.' : 'You’re on the PC, so Open uses the on-this-PC address.';
+  const BEHIND = ['navidrome', 'jellyfin', 'ntfy'];
+  const apps = [...j.apps.filter(a => !BEHIND.includes(a.key)), { divider: true }, ...j.apps.filter(a => BEHIND.includes(a.key))];
+  for (const a of apps) {
+    if (a.divider) { const h = document.createElement('h4'); h.textContent = 'Behind the scenes'; h.style.marginTop = '14px'; list.appendChild(h); continue; }
+    const s = st && st[a.key === 'olympus' ? '' : a.key];
+    const up = a.key === 'olympus' ? true : s ? s.up : null;
+    const best = viaTailscale ? (a.remote || a.local) : a.local;
+    const row = document.createElement('div'); row.className = 'approw';
+    const line = (k, url, off) => `<div class="aline"><span class="k">${k}</span>${url ? `<a href="${esc(url)}/" target="_blank" rel="noopener">${esc(url)}</a><button type="button" data-copy="${esc(url)}">Copy</button>` : `<span class="off">${off}</span>`}</div>`;
+    const off = /this PC|alerts/.test(a.what) ? 'This PC only' : 'Not set up for other devices';
+    row.innerHTML = `<span class="dot ${up === null ? '' : up ? 'up' : 'down'}"></span>
+      <span class="t"><b>${esc(a.name)}</b><small>${esc(a.what)}${up === false ? ' · not running' : ''}</small></span>
+      <span class="acts"><a class="go" href="${esc(best)}/" target="_blank" rel="noopener">Open</a><button type="button" data-copy="${esc(a.remote || a.local)}">Copy link</button><button type="button" data-more aria-expanded="false">Details</button></span>
+      <div class="more hidden">${line('Anywhere', a.remote, off)}${line('On this PC', a.local)}</div>`;
+    row.querySelector('[data-more]').onclick = (e) => { const m = row.querySelector('.more'); m.classList.toggle('hidden'); e.currentTarget.setAttribute('aria-expanded', String(!m.classList.contains('hidden'))); };
     list.appendChild(row);
   }
   list.querySelectorAll('[data-copy]').forEach(b => b.addEventListener('click', () => copyText(b.dataset.copy, b)));
 }
+function paintPhone(){
+  if (!setData) return;
+  const grid = $('#qrGrid');
+  const apps = setData.apps.filter(a => a.remote && PHONE_HOW[a.key]);
+  grid.innerHTML = apps.length ? apps.map(a => `<div class="qrcard"><div class="qr" role="img" aria-label="QR code for ${esc(a.name)}">${qrSvg(a.remote + '/')}</div>
+      <b>${esc(a.name)}</b><small>${esc(PHONE_HOW[a.key])}</small></div>`).join('')
+    : '<div class="note">Tailscale isn’t answering on the PC, so there are no phone addresses to show.</div>';
+}
+async function paintBackups(){
+  let b; try { b = await (await fetch('/api/backup')).json(); } catch { b = null; }
+  const el = $('#setBk');
+  if (!b || b.missing) { el.innerHTML = 'Backups aren’t set up on this PC.'; return; }
+  const when = b.finished ? new Date(b.finished) : null;
+  const where = [b.hdd || b.usb ? `backup drive ${(b.hdd || b.usb).ok ? '✓' : '✗'}` : '', b.koofr ? `Koofr ${b.koofr.ok ? '✓' : '✗'}` : ''].filter(Boolean).join(' · ');
+  el.innerHTML = `<b>${b.ok === false ? 'The last backup had a problem' : 'All backed up'}</b><br>${when ? 'Last backup ' + esc(niceWhen(when)) : 'No backup yet'}${where ? ' · ' + esc(where) : ''}<br>Runs every night at 3am, and tells your phone if anything goes wrong.`;
+}
+async function openAddresses(){
+  $('#addrScrim').classList.remove('hidden'); $('#addrClose').focus();
+  let tab = 'apps'; try { tab = localStorage.getItem('olympus.settingsTab') || 'apps'; } catch {}
+  $('#setWho').textContent = nav ? `Signed in as ${nav.name || nav.u}` : 'Signed in';
+  $('#setVer').textContent = ($('footer span') && $('footer span').textContent.split('·')[0].trim()) || 'Olympus';
+  fetch('/api/alerts').then(r => r.json()).then(a => {
+    const srv = setData && (setData.apps.find(x => x.key === 'ntfy') || {}).remote;
+    $('#setTopic').textContent = a.topic ? `Topic “${a.topic}”${srv ? ' on ' + srv : ''}${a.last ? ' · last sent ' + shortDate(a.last * 1000) : ''}` : 'Not set up';
+  }).catch(() => {});
+  paintBackups();
+  $('#appsList').innerHTML = '<div class="note">Loading…</div>';
+  try { setData = await (await fetch('/api/addresses')).json(); } catch { $('#appsNote').textContent = 'Couldn’t ask the PC just now.'; return; }
+  $('#setPc').textContent = setData.host ? `${setData.host} on Tailscale` : 'Tailscale isn’t answering';
+  let st = null; try { st = await (await fetch('/api/status')).json(); } catch {}
+  paintApps(st); setTab(tab);
+}
 function closeAddresses(){ $('#addrScrim').classList.add('hidden'); }
 $('#addrClose').addEventListener('click', closeAddresses);
 $('#x-settings').addEventListener('click', openAddresses);
+document.querySelectorAll('#addrSheet .stabs button').forEach(b => b.addEventListener('click', () => setTab(b.dataset.tab)));
 $('#setTest').addEventListener('click', async (e) => {
   const b = e.currentTarget; b.disabled = true;
   try { const r = await (await fetch('/api/alerts/test', { method: 'POST' })).json(); toast(r.ok ? 'Sent — check your phone' : "Couldn't reach ntfy"); }
   catch { toast("Couldn't reach Olympus"); }
   b.disabled = false;
 });
+$('#setStorage').addEventListener('click', () => { closeAddresses(); openStorage(); });
 $('#setOut').addEventListener('click', () => $('#logout').click());
 $('#addrScrim').addEventListener('click', (e) => { if (e.target.id === 'addrScrim') closeAddresses(); });
 document.addEventListener('keydown', (e) => { if (e.key === 'Escape' && !$('#addrScrim').classList.contains('hidden')) closeAddresses(); });
