@@ -86,6 +86,9 @@ header{display:flex;flex-wrap:wrap;align-items:flex-end;justify-content:space-be
 button.ex{font:inherit;background:none;border:0;cursor:pointer}
 .exg{position:relative}
 .ex[aria-expanded="true"] .ic{border-color:var(--accent)}
+.ex.settings{margin-top:auto}
+.ex.settings .ic{background:transparent;border-color:var(--line);color:var(--soft)}
+.ex.settings:hover .ic{border-color:var(--accent);color:var(--accent)}
 .flyout{position:absolute;z-index:20;left:80px;top:0;width:250px;padding:10px;border-radius:14px;background:var(--panel);border:1px solid var(--line);box-shadow:0 12px 32px rgba(0,0,0,.4)}
 .flyout h4{margin:4px 8px 8px;font-size:11px;font-weight:500;letter-spacing:.12em;text-transform:uppercase;color:var(--muted)}
 .fo{display:flex;align-items:center;gap:12px;padding:10px;border-radius:10px;color:var(--text)}
@@ -283,6 +286,7 @@ footer button{color:var(--muted);text-decoration:underline}
   .ex .dot{position:static;order:3;border:0}
   .ex .tip{display:none}
   button.ex{border:1px solid var(--line);background:var(--raised)}
+  .ex.settings{margin-top:0}
   .flyout{left:0;top:calc(100% + 8px);width:min(290px,calc(100vw - 32px))}
   .apps{grid-template-columns:minmax(0,1fr)}
   .droprow{grid-template-columns:minmax(0,1fr);margin-top:-16px}
@@ -383,6 +387,7 @@ footer button{color:var(--muted);text-decoration:underline}
         </div>
       </div>
       <a class="ex" id="t-cerberus" target="_blank" rel="noopener"><span class="dot"></span><span class="ic" data-icon="shield"></span><span class="nm">Cerberus</span><span class="tip">Cerberus<small class="st">Passwords · checking…</small></span></a>
+      <button class="ex settings" id="x-settings" type="button"><span class="ic" data-icon="gear"></span><span class="nm">Settings</span></button>
     </nav>
 
     <section aria-label="Quick actions"><div class="chips" id="chips"></div></section>
@@ -448,10 +453,15 @@ footer button{color:var(--muted);text-decoration:underline}
 <div class="scrim hidden" id="addrScrim">
   <div class="sheet wide" id="addrSheet" role="dialog" aria-modal="true" aria-labelledby="addrTitle">
     <button class="x" type="button" id="addrClose" aria-label="Close"><span data-icon="close"></span></button>
-    <h2 id="addrTitle">Addresses</h2>
-    <p class="sub" id="addrSub">Checking…</p>
+    <h2 id="addrTitle">Settings</h2>
+    <h4>Addresses</h4>
+    <p class="note" id="addrSub">Checking…</p>
     <div class="slist" id="addrList"></div>
     <p class="note">“Anywhere” addresses work on any of your devices with Tailscale switched on. “On this PC” only works on the PC itself.</p>
+    <h4>Phone alerts</h4>
+    <div class="srow"><span class="t"><b>ntfy topic</b><small id="setTopic">…</small></span><button type="button" id="setTest">Send a test</button></div>
+    <h4>This device</h4>
+    <div class="srow"><span class="t"><b id="setWho">Signed in</b><small>Olympus remembers your music and films accounts on this device</small></span><button type="button" id="setOut">Sign out</button></div>
   </div>
 </div>
 
@@ -471,6 +481,7 @@ const ICONS = {
   heart: P('<path d="M12 21s-7-4.5-9-9a5 5 0 0 1 9-3 5 5 0 0 1 9 3c-2 4.5-9 9-9 9z"/>'),
   play: P('<path d="M7 4l13 8-13 8z"/>'),
   dl: P('<path d="M12 4v11M7 10l5 5 5-5M5 20h14"/>'),
+  gear: P('<circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.7 1.7 0 0 0 .3 1.8l.1.1a2 2 0 1 1-2.8 2.8l-.1-.1a1.7 1.7 0 0 0-1.8-.3 1.7 1.7 0 0 0-1 1.5V21a2 2 0 1 1-4 0v-.1a1.7 1.7 0 0 0-1.1-1.5 1.7 1.7 0 0 0-1.8.3l-.1.1a2 2 0 1 1-2.8-2.8l.1-.1a1.7 1.7 0 0 0 .3-1.8 1.7 1.7 0 0 0-1.5-1H3a2 2 0 1 1 0-4h.1a1.7 1.7 0 0 0 1.5-1.1 1.7 1.7 0 0 0-.3-1.8l-.1-.1a2 2 0 1 1 2.8-2.8l.1.1a1.7 1.7 0 0 0 1.8.3H9a1.7 1.7 0 0 0 1-1.5V3a2 2 0 1 1 4 0v.1a1.7 1.7 0 0 0 1 1.5 1.7 1.7 0 0 0 1.8-.3l.1-.1a2 2 0 1 1 2.8 2.8l-.1.1a1.7 1.7 0 0 0-.3 1.8V9a1.7 1.7 0 0 0 1.5 1H21a2 2 0 1 1 0 4h-.1a1.7 1.7 0 0 0-1.5 1z"/>'),
   link: P('<path d="M10 14a4 4 0 0 0 5.7 0l3-3a4 4 0 0 0-5.7-5.7l-1 1"/><path d="M14 10a4 4 0 0 0-5.7 0l-3 3a4 4 0 0 0 5.7 5.7l1-1"/>'),
   disk: P('<rect x="3" y="4" width="18" height="16" rx="2"/><path d="M3 14h18M7 17h.01"/>'),
   close: P('<path d="M6 6l12 12M18 6L6 18"/>'),
@@ -988,6 +999,8 @@ async function copyText(text, btn){
 }
 async function openAddresses(){
   $('#addrScrim').classList.remove('hidden'); $('#addrClose').focus();
+  $('#setWho').textContent = nav ? `Signed in as ${nav.name || nav.u}` : 'Signed in';
+  fetch('/api/alerts').then(r => r.json()).then(a => { $('#setTopic').textContent = a.topic ? `${a.topic}${a.last ? ' · last sent ' + shortDate(a.last * 1000) : ''}` : 'Not set up'; }).catch(() => {});
   let j; try { j = await (await fetch('/api/addresses')).json(); } catch { $('#addrSub').textContent = 'Couldn’t ask the PC just now.'; return; }
   $('#addrSub').textContent = j.host ? `This PC on Tailscale: ${j.host}` : 'Tailscale isn’t answering on the PC, so only the on-this-PC addresses are shown.';
   const list = $('#addrList'); list.innerHTML = '';
@@ -1002,6 +1015,14 @@ async function openAddresses(){
 }
 function closeAddresses(){ $('#addrScrim').classList.add('hidden'); }
 $('#addrClose').addEventListener('click', closeAddresses);
+$('#x-settings').addEventListener('click', openAddresses);
+$('#setTest').addEventListener('click', async (e) => {
+  const b = e.currentTarget; b.disabled = true;
+  try { const r = await (await fetch('/api/alerts/test', { method: 'POST' })).json(); toast(r.ok ? 'Sent — check your phone' : "Couldn't reach ntfy"); }
+  catch { toast("Couldn't reach Olympus"); }
+  b.disabled = false;
+});
+$('#setOut').addEventListener('click', () => $('#logout').click());
 $('#addrScrim').addEventListener('click', (e) => { if (e.target.id === 'addrScrim') closeAddresses(); });
 document.addEventListener('keydown', (e) => { if (e.key === 'Escape' && !$('#addrScrim').classList.contains('hidden')) closeAddresses(); });
 
@@ -1017,12 +1038,11 @@ function paintChips(){
     `<button class="chip" id="scanBtn">${icon('scan')}<span>Scan for new media</span></button>`,
     `<button class="chip" id="statsBtn">${icon('chart')}<span>Your stats</span></button>`,
     `<button class="chip" id="storageBtn">${icon('disk')}<span>Storage</span></button>`,
-    `<button class="chip" id="addrBtn">${icon('link')}<span>Addresses</span></button>`,
   ];
   $('#chips').innerHTML = chips.join('');
   $('#storageBtn').onclick = openStorage;
   $('#statsBtn').onclick = openStats;
-  $('#addrBtn').onclick = openAddresses;
+
   $('#scanBtn').onclick = async () => {
     const done = [];
     if (nav) { try { await navApi('startScan'); done.push('music'); } catch {} }
