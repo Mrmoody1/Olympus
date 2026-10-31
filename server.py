@@ -49,16 +49,21 @@ SERVICES = {
     "navidrome": BACKENDS["/nav/"] + "/ping",
     "jellyfin": BACKENDS["/jf/"] + "/System/Info/Public",
     "mnemosyne": os.environ.get("MNEMOSYNE_URL", "http://127.0.0.1:2283").rstrip("/") + "/api/server/ping",
+    "clio": os.environ.get("CLIO_URL", "http://127.0.0.1:13378").rstrip("/") + "/ping",
+    "aegis": os.environ.get("AEGIS_URL", "http://127.0.0.1:3080").rstrip("/") + "/",
 }
 NTFY_URL = os.environ.get("NTFY_URL", "http://127.0.0.1:8091").rstrip("/")
 NTFY_TOPIC = os.environ.get("NTFY_TOPIC", "olympus")
 CERBERUS_TS_PORT = os.environ.get("CERBERUS_TS_PORT", "7443")
+AEGIS_CONF = os.path.expanduser(os.environ.get("AEGIS_CONF", "~/.config/olympus/aegis.json"))
 
 
 def installed_services():
     """SERVICES, minus apps that aren't installed on this PC (Mnemosyne is optional)."""
-    return {k: u for k, u in SERVICES.items()
-            if k != "mnemosyne" or os.path.exists(os.environ.get("MNEMOSYNE_DIR", "/opt/mnemosyne") + "/docker-compose.yml")}
+    optional = {"mnemosyne": os.environ.get("MNEMOSYNE_DIR", "/opt/mnemosyne"), "clio": os.environ.get("CLIO_DIR", "/opt/clio")}
+    have = {k: os.path.exists(d + "/docker-compose.yml") for k, d in optional.items()}
+    have["aegis"] = os.path.exists(AEGIS_CONF)
+    return {k: u for k, u in SERVICES.items() if have.get(k, True)}
 _ts_host = {"name": None, "at": 0}
 
 
@@ -76,7 +81,7 @@ def ts_host():
 
 BACKUP_STATUS = os.environ.get("BACKUP_STATUS", "/var/lib/homelab-backup/status.json")
 NTFY_TOKEN = os.environ.get("NTFY_TOKEN", "")
-NICE = {"odysseus": "Odysseus", "apollo": "Apollo", "theia": "Theia", "cerberus": "Cerberus (passwords)", "budget": "Plutus budget", "investments": "Plutus investments", "navidrome": "Navidrome (music library)", "jellyfin": "Jellyfin (film library)", "mnemosyne": "Mnemosyne (photos)"}
+NICE = {"odysseus": "Odysseus", "apollo": "Apollo", "theia": "Theia", "cerberus": "Cerberus (passwords)", "budget": "Plutus budget", "investments": "Plutus investments", "navidrome": "Navidrome (music library)", "jellyfin": "Jellyfin (film library)", "mnemosyne": "Mnemosyne (photos)", "clio": "Clio (books)", "aegis": "Aegis (ad blocking)"}
 HOP_BY_HOP = {"connection", "keep-alive", "proxy-authenticate", "proxy-authorization",
               "te", "trailers", "transfer-encoding", "upgrade", "host"}
 
@@ -158,7 +163,7 @@ def folder_sizes_loop():
 def compute_sizes():
     sizes = {}
     purge_cleared()
-    for sub in ("music", "movies", "shows", "photos", "inbox", ".cleared"):
+    for sub in ("music", "movies", "shows", "photos", "books", "inbox", ".cleared"):
         total = 0
         for root, _, files in os.walk(os.path.join(MEDIA, sub)):
             for f in files:
@@ -299,7 +304,7 @@ def watcher():
             fails[k] = 0 if up else fails[k] + 1
             if fails[k] == 2 and k not in down:          # two misses in a row = really down
                 down.add(k)
-                notify(f"{NICE[k]} is down", f"{NICE[k]} stopped answering. Try: sudo systemctl restart {k}" if k not in ("odysseus", "cerberus", "budget", "investments", "mnemosyne") else f"{NICE[k]} stopped answering. Try: docker ps", "warning", "high")
+                notify(f"{NICE[k]} is down", f"{NICE[k]} stopped answering. Try: sudo systemctl restart {k}" if k not in ("odysseus", "cerberus", "budget", "investments", "mnemosyne", "clio", "aegis") else f"{NICE[k]} stopped answering. Try: docker ps", "warning", "high")
             elif up and k in down:
                 down.discard(k)
                 notify(f"{NICE[k]} is back", f"{NICE[k]} is running again.", "white_check_mark")
@@ -319,10 +324,12 @@ UPLOADING = os.path.join(INBOX, ".uploading")
 TIDY_SCRIPTS = [
     os.path.join(os.path.expanduser(os.environ.get("THEIA_DIR", "~/theia")), "tidy.py"),
     os.path.join(os.path.expanduser(os.environ.get("APOLLO_DIR", "~/apollo")), "tidy-music.py"),
+    os.path.join(os.path.expanduser(os.environ.get("CLIO_DIR_HOME", "~/clio")), "tidy-books.py"),
 ]
 DROP_TYPES = {".mkv", ".mp4", ".m4v", ".avi", ".mov", ".webm", ".wmv", ".ts", ".mpg", ".mpeg", ".flv",
               ".mp3", ".flac", ".m4a", ".aac", ".ogg", ".oga", ".opus", ".wav", ".wma", ".aiff", ".aif", ".ape", ".wv",
-              ".srt", ".ass", ".ssa", ".vtt", ".sub", ".idx", ".jpg", ".jpeg", ".png", ".webp"}
+              ".srt", ".ass", ".ssa", ".vtt", ".sub", ".idx", ".jpg", ".jpeg", ".png", ".webp",
+              ".m4b", ".epub", ".pdf", ".mobi", ".azw3", ".azw", ".cbz", ".cbr", ".fb2"}
 _admins = {}   # (u, t, s) -> time it was checked
 
 
@@ -546,13 +553,15 @@ ADDRESS_APPS = [  # key, name, what it is, local URL
     ("odysseus", "Odysseus", "AI workspace", SERVICES["odysseus"]),
     ("cerberus", "Cerberus", "Passwords", os.environ.get("CERBERUS_URL", "http://127.0.0.1:8222")),
     ("mnemosyne", "Mnemosyne", "Photos", os.environ.get("MNEMOSYNE_URL", "http://127.0.0.1:2283")),
+    ("clio", "Clio", "Books & podcasts", os.environ.get("CLIO_URL", "http://127.0.0.1:13378")),
+    ("aegis", "Aegis", "Ad blocking (admin page)", os.environ.get("AEGIS_URL", "http://127.0.0.1:3080")),
     ("budget", "Plutus budget", "Budget", os.environ.get("BUDGET_URL", "http://127.0.0.1:5006")),
     ("investments", "Plutus investments", "Investments", os.environ.get("INVESTMENTS_URL", "http://127.0.0.1:3333")),
     ("navidrome", "Navidrome", "Music library admin (this PC)", BACKENDS["/nav/"]),
     ("jellyfin", "Jellyfin", "Film library admin (this PC)", BACKENDS["/jf/"]),
     ("ntfy", "ntfy", "Phone alerts server", NTFY_URL),
 ]
-TS_DEFAULTS = {"mnemosyne": 6443, "olympus": 9443, "apollo": 443, "theia": 8443, "odysseus": 10000, "cerberus": int(CERBERUS_TS_PORT),
+TS_DEFAULTS = {"aegis": 4553, "clio": 4443, "mnemosyne": 6443, "olympus": 9443, "apollo": 443, "theia": 8443, "odysseus": 10000, "cerberus": int(CERBERUS_TS_PORT),
                "budget": 5443, "investments": 3443}
 _addr = {"at": 0, "v": None}
 
@@ -588,7 +597,7 @@ def addresses():
     host, served = ts_host(), served_ports()
     rows = []
     for key, name, what, url in ADDRESS_APPS:
-        if key == "mnemosyne" and "mnemosyne" not in installed_services():
+        if key in ("mnemosyne", "clio", "aegis") and key not in installed_services():
             continue
         local_port = _port(url)
         ts_port = served.get(local_port) if served is not None else TS_DEFAULTS.get(key)
@@ -650,6 +659,44 @@ def restore_run(place, snap, path):
     if j.get("error"):
         raise ValueError("The restore didn't work" if j["error"] != "not allowed" else "That isn't something Olympus can restore")
     return {"to": j["to"].replace(os.path.expanduser("~"), "~", 1)}
+
+
+# ---------- Aegis: what's been blocked, and pausing it ----------
+_aegis = {"at": 0, "v": None}
+
+
+def aegis_call(method, path, body=None):
+    with open(AEGIS_CONF) as f:
+        c = json.load(f)
+    import base64
+    req = urllib.request.Request(c["url"].rstrip("/") + path, method=method,
+                                 data=json.dumps(body).encode() if body is not None else None,
+                                 headers={"Authorization": "Basic " + base64.b64encode(f'{c["user"]}:{c["password"]}'.encode()).decode(),
+                                          "Content-Type": "application/json"})
+    with urllib.request.urlopen(req, timeout=5) as r:
+        t = r.read()
+    try:
+        return json.loads(t)
+    except ValueError:            # some AdGuard answers are just "OK"
+        return {}
+
+
+def aegis_summary(fresh=False):
+    if not os.path.exists(AEGIS_CONF):
+        return {"installed": False}
+    if not fresh and _aegis["v"] and time.time() - _aegis["at"] < 20:
+        return _aegis["v"]
+    try:
+        st, stats = aegis_call("GET", "/control/status"), aegis_call("GET", "/control/stats")
+        q, b = stats.get("num_dns_queries", 0), stats.get("num_blocked_filtering", 0)
+        v = {"installed": True, "up": bool(st.get("running")), "on": bool(st.get("protection_enabled")),
+             "pausedMins": round((st.get("protection_disabled_duration") or 0) / 60000),
+             "queries": q, "blocked": b, "pct": round(b * 100 / q) if q else 0,
+             "top": [list(d.items())[0] for d in (stats.get("top_blocked_domains") or [])[:5]]}
+    except Exception:
+        v = {"installed": True, "up": False}
+    _aegis["v"], _aegis["at"] = v, time.time()
+    return v
 
 
 # ---------- web server ----------
@@ -715,6 +762,8 @@ class Handler(http.server.SimpleHTTPRequestHandler):
             items = sorted(_cleared(), key=lambda i: -i["at"])
             return self._json({"items": [{**i, "from": os.path.relpath(i["from"], MEDIA),
                                           "deleteOn": i["at"] + KEEP_CLEARED_DAYS * 86400} for i in items]})
+        if self.path == "/api/aegis":
+            return self._json(aegis_summary())
         if self.path == "/api/addresses":
             return self._json(addresses())
         if self.path == "/api/stats/bases":
@@ -743,6 +792,16 @@ class Handler(http.server.SimpleHTTPRequestHandler):
                 gf_call("POST", f"/api/v1/accounts/{body['id']}/balances",
                         {"balance": bal, "date": time.strftime("%Y-%m-%d")})
                 return self._json({"ok": True, "balance": bal})
+            except Exception as e:
+                return self._json({"ok": False, "error": str(e)[:200]})
+        if self.path == "/api/aegis/pause":
+            if not self._drop_allowed():
+                return
+            try:
+                body = json.loads(self.rfile.read(int(self.headers.get("Content-Length") or 0)) or b"{}")
+                mins = max(0, min(24 * 60, int(body.get("minutes", 10))))
+                aegis_call("POST", "/control/protection", {"enabled": True} if mins == 0 else {"enabled": False, "duration": mins * 60000})
+                return self._json({"ok": True, **aegis_summary(fresh=True)})
             except Exception as e:
                 return self._json({"ok": False, "error": str(e)[:200]})
         if self.path in ("/api/restore/places", "/api/restore/ls", "/api/restore/run"):

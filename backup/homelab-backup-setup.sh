@@ -122,7 +122,9 @@ paths(){
            /etc/systemd/system/apollo.service /etc/systemd/system/theia.service \
            /etc/systemd/system/olympus.service /etc/fstab \
            "$HOME_DIR/.config/olympus" "$HOME_DIR/.config/apollo" "$HOME_DIR/.config/theia" \
-           "$HOME_DIR/mnemosyne" /opt/mnemosyne/.env /opt/mnemosyne/docker-compose.yml; do
+           "$HOME_DIR/mnemosyne" /opt/mnemosyne/.env /opt/mnemosyne/docker-compose.yml \
+           "$HOME_DIR/clio" /opt/clio/config /opt/clio/metadata /opt/clio/docker-compose.yml \
+           "$HOME_DIR/aegis" /opt/AdGuardHome/AdGuardHome.yaml; do
     [ -e "$p" ] && echo "$p"
   done; }
 excludes(){
@@ -131,8 +133,9 @@ excludes(){
   echo "--exclude=**/transcodes"
   echo "--exclude=/srv/media/photos/thumbs"            # Mnemosyne remakes these itself
   echo "--exclude=/srv/media/photos/encoded-video"
+  echo "--exclude=/opt/clio/metadata/cache"; echo "--exclude=/opt/clio/metadata/logs"   # Clio remakes these
   echo "--exclude=/srv/media/.cleared"                  # cleared-out films: on their way to being deleted
-  if [ "$1" = koofr ]; then echo "--exclude=/srv/media/movies"; echo "--exclude=/srv/media/shows"; echo "--exclude=/srv/media/inbox"; fi; }
+  if [ "$1" = koofr ]; then echo "--exclude=/srv/media/movies"; echo "--exclude=/srv/media/shows"; echo "--exclude=/srv/media/inbox"; echo "--exclude=/srv/media/books/audiobooks"; echo "--exclude=/srv/media/books/podcasts"; fi; }
 
 human(){ numfmt --to=iec --suffix=B "${1:-0}" 2>/dev/null || echo "${1}B"; }
 

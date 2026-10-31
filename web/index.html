@@ -404,7 +404,7 @@ footer button{color:var(--muted);text-decoration:underline}
       <div class="dropcol">
         <div class="drop" id="drop" role="button" tabindex="0" aria-describedby="dropHint">
           <span class="ic" data-icon="upload"></span>
-          <span class="tx"><b id="dropTitle">Drop films or music here</b><small id="dropHint">or click to choose · filed for you</small></span>
+          <span class="tx"><b id="dropTitle">Drop films, music or books here</b><small id="dropHint">or click to choose · filed for you</small></span>
           <span class="bar" id="dropBar"></span>
           <input type="file" id="dropPick" multiple hidden>
         </div>
@@ -426,6 +426,8 @@ footer button{color:var(--muted);text-decoration:underline}
       </div>
       <a class="ex" id="t-cerberus" target="_blank" rel="noopener"><span class="dot"></span><span class="ic" data-icon="shield"></span><span class="nm">Cerberus</span><span class="tip">Cerberus<small class="st">Passwords · checking…</small></span></a>
       <a class="ex" id="t-mnemosyne" target="_blank" rel="noopener"><span class="dot"></span><span class="ic" data-icon="photo"></span><span class="nm">Mnemosyne</span><span class="tip">Mnemosyne<small class="st">Photos · checking…</small></span></a>
+      <a class="ex" id="t-aegis" target="_blank" rel="noopener"><span class="dot"></span><span class="ic" data-icon="aegis"></span><span class="nm">Aegis</span><span class="tip">Aegis<small class="st">Ad blocking · checking…</small></span></a>
+      <a class="ex" id="t-clio" target="_blank" rel="noopener"><span class="dot"></span><span class="ic" data-icon="book"></span><span class="nm">Clio</span><span class="tip">Clio<small class="st">Books · checking…</small></span></a>
       <button class="ex settings" id="x-settings" type="button"><span class="ic" data-icon="gear"></span><span class="nm">Settings</span></button>
     </nav>
 
@@ -444,6 +446,7 @@ footer button{color:var(--muted);text-decoration:underline}
         <div class="meter" id="disk"></div>
         <div class="facts" id="facts"></div>
         <div class="alerts" id="alerts"><span class="dot"></span><span class="t">Phone alerts</span><button class="mini" id="testAlert">Send a test</button></div>
+        <div class="alerts hidden" id="aegisRow"><span class="dot"></span><span class="t">Aegis</span><button class="mini" id="aegisBtn">Pause 10 min</button></div>
         <div class="backups hidden" id="backups"></div>
       </aside>
     </div>
@@ -556,6 +559,8 @@ const ICONS = {
   play: P('<path d="M7 4l13 8-13 8z"/>'),
   dl: P('<path d="M12 4v11M7 10l5 5 5-5M5 20h14"/>'),
   gear: P('<circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.7 1.7 0 0 0 .3 1.8l.1.1a2 2 0 1 1-2.8 2.8l-.1-.1a1.7 1.7 0 0 0-1.8-.3 1.7 1.7 0 0 0-1 1.5V21a2 2 0 1 1-4 0v-.1a1.7 1.7 0 0 0-1.1-1.5 1.7 1.7 0 0 0-1.8.3l-.1.1a2 2 0 1 1-2.8-2.8l.1-.1a1.7 1.7 0 0 0 .3-1.8 1.7 1.7 0 0 0-1.5-1H3a2 2 0 1 1 0-4h.1a1.7 1.7 0 0 0 1.5-1.1 1.7 1.7 0 0 0-.3-1.8l-.1-.1a2 2 0 1 1 2.8-2.8l.1.1a1.7 1.7 0 0 0 1.8.3H9a1.7 1.7 0 0 0 1-1.5V3a2 2 0 1 1 4 0v.1a1.7 1.7 0 0 0 1 1.5 1.7 1.7 0 0 0 1.8-.3l.1-.1a2 2 0 1 1 2.8 2.8l-.1.1a1.7 1.7 0 0 0-.3 1.8V9a1.7 1.7 0 0 0 1.5 1H21a2 2 0 1 1 0 4h-.1a1.7 1.7 0 0 0-1.5 1z"/>'),
+  aegis: P('<circle cx="12" cy="12" r="9"/><circle cx="12" cy="12" r="5"/><path d="M12 3v4M12 17v4M3 12h4M17 12h4"/>'),
+  book: P('<path d="M4 5a2 2 0 0 1 2-2h13v16H6a2 2 0 0 0-2 2z"/><path d="M4 21V5M19 19v2H6"/><path d="M9 7h6"/>'),
   grid: P('<rect x="3" y="3" width="7" height="7" rx="1.5"/><rect x="14" y="3" width="7" height="7" rx="1.5"/><rect x="3" y="14" width="7" height="7" rx="1.5"/><rect x="14" y="14" width="7" height="7" rx="1.5"/>'),
   phone: P('<rect x="7" y="2" width="10" height="20" rx="2"/><path d="M11 18h2"/>'),
   user: P('<circle cx="12" cy="8" r="4"/><path d="M4 21a8 8 0 0 1 16 0"/>'),
@@ -601,6 +606,8 @@ const APPS = {
   theia: viaTailscale ? `https://${host}:8443` : `http://${host}:8095`,
   cerberus: viaTailscale ? `https://${host}:7443` : `http://${host}:8222`,
   mnemosyne: viaTailscale ? `https://${host}:6443` : `http://${host}:2283`,
+  clio: viaTailscale ? `https://${host}:4443` : `http://${host}:13378`,
+  aegis: viaTailscale ? `https://${host}:4553` : `http://${host}:3080`,
 };
 $('#where').textContent = viaTailscale ? 'via Tailscale' : 'on this PC';
 for (const k of Object.keys(APPS)) $('#t-' + k).href = APPS[k] + '/';
@@ -722,7 +729,7 @@ function tickClock(){
 }
 
 /* ---------- status ---------- */
-const SVC_NAMES = { odysseus: 'Odysseus', apollo: 'Apollo', theia: 'Theia', cerberus: 'Cerberus', budget: 'Plutus · budget', investments: 'Plutus · investments', mnemosyne: 'Mnemosyne · photos', navidrome: 'Navidrome · music library', jellyfin: 'Jellyfin · film library' };
+const SVC_NAMES = { odysseus: 'Odysseus', apollo: 'Apollo', theia: 'Theia', cerberus: 'Cerberus', budget: 'Plutus · budget', investments: 'Plutus · investments', mnemosyne: 'Mnemosyne · photos', clio: 'Clio · books', aegis: 'Aegis · ad blocking', navidrome: 'Navidrome · music library', jellyfin: 'Jellyfin · film library' };
 async function loadStatus(){
   let s;
   try { s = await (await fetch('/api/status')).json(); } catch { return; }
@@ -732,9 +739,9 @@ async function loadStatus(){
     $('#t-budget .dot').className = 'dot ' + (b ? 'up' : 'down');
     $('#t-investments .dot').className = 'dot ' + (i ? 'up' : 'down');
   }
-  for (const [k, what] of [['cerberus', 'Passwords'], ['mnemosyne', 'Photos']]) {
+  for (const [k, what] of [['cerberus', 'Passwords'], ['mnemosyne', 'Photos'], ['clio', 'Books'], ['aegis', 'Ad blocking']]) {
     const t = $('#t-' + k); const up = s[k] && s[k].up;
-    if (k === 'mnemosyne' && !s[k]) { t.classList.add('hidden'); continue; }   // not installed (yet)
+    if (k !== 'cerberus' && !s[k]) { t.classList.add('hidden'); continue; }   // not installed (yet)
     t.classList.remove('hidden');
     t.querySelector('.dot').className = 'dot ' + (up ? 'up' : 'down');
     t.querySelector('.st').textContent = `${what} · ` + (up ? 'running' : 'not running');
@@ -745,10 +752,36 @@ async function loadStatus(){
     t.querySelector('.dot').className = 'dot ' + (up ? 'up' : 'down');
     t.querySelector('.st').textContent = up ? 'Running' : (s[k] && s[k].up ? `${k === 'apollo' ? 'Navidrome' : 'Jellyfin'} is down` : 'Not running');
   }
-  $('#svc').innerHTML = Object.entries(SVC_NAMES).filter(([k]) => k !== 'mnemosyne' || s[k]).map(([k, n]) => `<div><span class="dot ${s[k] && s[k].up ? 'up' : 'down'}"></span><span class="n">${esc(n)}</span><span class="ms">${s[k] && s[k].up ? s[k].ms + ' ms' : 'down'}</span></div>`).join('');
+  $('#svc').innerHTML = Object.entries(SVC_NAMES).filter(([k]) => !['mnemosyne', 'clio', 'aegis'].includes(k) || s[k]).map(([k, n]) => `<div><span class="dot ${s[k] && s[k].up ? 'up' : 'down'}"></span><span class="n">${esc(n)}</span><span class="ms">${s[k] && s[k].up ? s[k].ms + ' ms' : 'down'}</span></div>`).join('');
 }
 
 /* ---------- the PC ---------- */
+async function loadAegis(){
+  let a; try { a = await (await fetch('/api/aegis')).json(); } catch { return; }
+  const row = $('#aegisRow'); row.classList.toggle('hidden', !a.installed);
+  if (!a.installed) return;
+  const tip = $('#t-aegis .st');
+  if (!a.up) {
+    row.querySelector('.dot').className = 'dot down';
+    row.querySelector('.t').innerHTML = 'Aegis<small>Not answering. Ads aren’t being blocked right now.</small>';
+    $('#aegisBtn').classList.add('hidden'); if (tip) tip.textContent = 'Ad blocking · not running'; return;
+  }
+  $('#aegisBtn').classList.remove('hidden');
+  row.querySelector('.dot').className = 'dot ' + (a.on ? 'up' : 'warn');
+  const n = fmtNum(a.blocked);
+  row.querySelector('.t').innerHTML = a.on
+    ? `Aegis · ad blocking<small>${n} ads and trackers blocked today${a.queries ? ` (${a.pct}% of lookups)` : ''}${a.top && a.top[0] ? ' · most: ' + esc(a.top[0][0]) : ''}</small>`
+    : `Aegis · paused<small>Blocking is off${a.pausedMins ? ` for ${a.pausedMins} more min` : ''}. ${n} blocked today.</small>`;
+  $('#aegisBtn').textContent = a.on ? 'Pause 10 min' : 'Turn back on';
+  $('#aegisBtn').dataset.mins = a.on ? '10' : '0';
+  if (tip) tip.textContent = a.on ? `Blocking · ${n} today` : 'Paused';
+}
+$('#aegisBtn').addEventListener('click', async (e) => {
+  const b = e.currentTarget; b.disabled = true;
+  try { const j = await adminPost('/api/aegis/pause', { minutes: +b.dataset.mins }); toast(+b.dataset.mins ? 'Ad blocking paused for 10 minutes' : 'Ad blocking is back on'); }
+  catch (err) { toast(err.message); }
+  b.disabled = false; loadAegis();
+});
 async function loadAlerts(){
   try {
     const a = await (await fetch('/api/alerts')).json();
@@ -764,7 +797,7 @@ async function loadSystem(){
   let s;
   try { s = await (await fetch('/api/system')).json(); } catch { return; }
   const d = s.disk; const f = s.folders || {};
-  const parts = [['Music', f.music, '#e0805f'], ['Films', f.movies, '#8fa8e0'], ['Shows', f.shows, '#7fb98a'], ['Photos', f.photos, '#d98fb0']].filter(p => p[1]);
+  const parts = [['Music', f.music, '#e0805f'], ['Films', f.movies, '#8fa8e0'], ['Shows', f.shows, '#7fb98a'], ['Photos', f.photos, '#d98fb0'], ['Books', f.books, '#c9a77f']].filter(p => p[1]);
   const media = parts.reduce((t, p) => t + p[1], 0);
   const other = Math.max(0, d.used - media);
   $('#disk').innerHTML = `<div class="l"><span>Storage <span style="color:var(--muted)">${esc(d.path)}</span></span><b>${fmtBytes(d.free)} free</b></div>
@@ -909,7 +942,7 @@ function storRow(title, meta, buttons){
 async function paintStorageDisk(){
   let s; try { s = await (await fetch('/api/system')).json(); } catch { return; }
   const d = s.disk, f = s.folders || {};
-  const parts = [['Music', f.music, '#e0805f'], ['Films', f.movies, '#8fa8e0'], ['Shows', f.shows, '#7fb98a'], ['Photos', f.photos, '#d98fb0'], ['Inbox', f.inbox, '#d9b35b'], ['Recently cleared', f['.cleared'], '#a47fc9']].filter(p => p[1]);
+  const parts = [['Music', f.music, '#e0805f'], ['Films', f.movies, '#8fa8e0'], ['Shows', f.shows, '#7fb98a'], ['Photos', f.photos, '#d98fb0'], ['Books', f.books, '#c9a77f'], ['Inbox', f.inbox, '#d9b35b'], ['Recently cleared', f['.cleared'], '#a47fc9']].filter(p => p[1]);
   const other = Math.max(0, d.used - parts.reduce((t, p) => t + p[1], 0));
   $('#storSub').textContent = `${fmtBytes(d.free)} free of ${fmtBytes(d.total)}`;
   $('#storDisk').innerHTML = `<div class="diskbar">${parts.map(p => `<span style="width:${p[1] / d.total * 100}%;background:${p[2]}"></span>`).join('')}<span style="width:${other / d.total * 100}%;background:#5a5754"></span></div>
@@ -1092,6 +1125,8 @@ const PHONE_HOW = {
   investments: 'Open it, then ⋮ → Add to Home screen → Install',
   cerberus: 'Use the Bitwarden app: Self-hosted, with this as the server',
   mnemosyne: 'Use the Immich app, with this as the server address',
+  clio: 'Use the Audiobookshelf app, with this as the server address',
+  aegis: 'Its admin page. Blocking itself starts once Tailscale DNS points to Aegis',
 };
 let setData = null;
 function qrSvg(text){
@@ -1288,14 +1323,15 @@ function paintChips(){
 (() => {
   const box = $('#drop'), pick = $('#dropPick'), bar = $('#dropBar'), res = $('#dropRes');
   const title = $('#dropTitle'), hint = $('#dropHint');
-  const TYPES = /\.(mkv|mp4|m4v|avi|mov|webm|wmv|ts|mpe?g|flv|mp3|flac|m4a|aac|ogg|oga|opus|wav|wma|aiff?|ape|wv|srt|ass|ssa|vtt|sub|idx|jpe?g|png|webp)$/i;
+  const TYPES = /\.(mkv|mp4|m4v|avi|mov|webm|wmv|ts|mpe?g|flv|mp3|flac|m4a|m4b|aac|ogg|oga|opus|wav|wma|aiff?|ape|wv|srt|ass|ssa|vtt|sub|idx|jpe?g|png|webp|epub|pdf|mobi|azw3?|cbz|cbr|fb2)$/i;
   let busy = false;
-  const reset = () => { title.textContent = 'Drop films or music here'; hint.textContent = 'or click to choose · filed for you'; bar.style.width = '0'; box.classList.remove('busy'); busy = false; };
+  const reset = () => { title.textContent = 'Drop films, music or books here'; hint.textContent = 'or click to choose · filed for you'; bar.style.width = '0'; box.classList.remove('busy'); busy = false; };
   // 'movies/Alien (1979)/Alien (1979).mkv' -> 'Film · Alien (1979)'; music paths -> 'Music · Artist · Album · Song'
   const nice = (path) => {
     const p = path.split('/'), stem = (f) => f.replace(/\.[^.]+$/, '');
     if (p[0] === 'movies') return `Film · ${p[1]}`;
     if (p[0] === 'shows') return `Episode · ${stem(p[p.length - 1])}`;
+    if (p[0] === 'books') return `${p[1] === 'audiobooks' ? 'Audiobook' : 'Book'} · ${p[3] || ''} · ${p[2] || ''}`;
     return `Music · ${p[0]} · ${p[1]} · ${stem(p[p.length - 1]).replace(/^\d+(-\d+)? /, '')}`;
   };
   const auth = () => nav ? { 'X-Nav-U': nav.u, 'X-Nav-T': nav.t, 'X-Nav-S': nav.s } : {};
@@ -1326,7 +1362,7 @@ function paintChips(){
     if (!nav) { show([['left', 'Sign in to Olympus first.']]); return; }
     const skipped = items.filter(i => !TYPES.test(i.file.name));
     items = items.filter(i => TYPES.test(i.file.name));
-    if (!items.length) { show([['left', skipped.length ? "Those aren't film or music files." : 'Nothing to add.']]); return; }
+    if (!items.length) { show([['left', skipped.length ? "Those aren't films, music or books." : 'Nothing to add.']]); return; }
     busy = true; box.classList.add('busy'); res.classList.add('hidden');
     const total = items.reduce((n, i) => n + i.file.size, 0) || 1;
     let done = 0; const rows = [];
@@ -1352,7 +1388,7 @@ function paintChips(){
         else if (l.startsWith('· Recognised ')) rows.push(['ok', '♪ ' + l.slice(2)]);
       }
     } catch { rows.push(['left', "Couldn't file them just now. They'll be filed within 5 minutes."]); }
-    if (skipped.length) rows.push(['left', skipped.length === 1 ? `· Skipped ${skipped[0].file.name}: not a film or music` : `· Skipped ${skipped.length} files that aren't films or music`]);
+    if (skipped.length) rows.push(['left', skipped.length === 1 ? `· Skipped ${skipped[0].file.name}: not a film or music` : `· Skipped ${skipped.length} files that aren't films, music or books`]);
     if (!rows.some(r => r[0] === 'ok') && !rows.length) rows.push(['left', 'Nothing new was filed.']);
     // Tell the libraries straight away so they show up in a minute
     if (rows.some(r => r[0] === 'ok')) {
@@ -1425,7 +1461,7 @@ async function runSearch(q){
 let timers = [];
 function start(){
   $('#login').classList.add('hidden'); $('#app').classList.remove('hidden');
-  tickClock(); loadStatus(); loadSystem(); loadLive(); loadFresh(); paintChips(); loadAlerts(); loadBackup(); loadBalances();
+  tickClock(); loadStatus(); loadSystem(); loadLive(); loadFresh(); paintChips(); loadAlerts(); loadBackup(); loadBalances(); loadAegis();
   setTimeout(() => { if (nav) snapshotIfNeeded().catch(() => {}); }, 8000);
   timers.forEach(clearInterval);
   timers = [
@@ -1435,6 +1471,7 @@ function start(){
     setInterval(() => { if (!document.hidden) loadLive(); }, 15000),
     setInterval(() => { if (!document.hidden) loadFresh(); }, 300000),
     setInterval(() => { if (!document.hidden) loadBackup(); }, 60000),
+    setInterval(() => { if (!document.hidden) loadAegis(); }, 30000),
   ];
 }
 document.addEventListener('visibilitychange', () => { if (!document.hidden && (nav || jfa)) { loadStatus(); loadLive(); loadSystem(); } });
