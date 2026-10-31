@@ -51,6 +51,7 @@ SERVICES = {
     "mnemosyne": os.environ.get("MNEMOSYNE_URL", "http://127.0.0.1:2283").rstrip("/") + "/api/server/ping",
     "clio": os.environ.get("CLIO_URL", "http://127.0.0.1:13378").rstrip("/") + "/ping",
     "aegis": os.environ.get("AEGIS_URL", "http://127.0.0.1:3080").rstrip("/") + "/",
+    "athena": os.environ.get("ATHENA_URL", "http://127.0.0.1:8010").rstrip("/") + "/",
 }
 NTFY_URL = os.environ.get("NTFY_URL", "http://127.0.0.1:8091").rstrip("/")
 NTFY_TOPIC = os.environ.get("NTFY_TOPIC", "olympus")
@@ -60,7 +61,8 @@ AEGIS_CONF = os.path.expanduser(os.environ.get("AEGIS_CONF", "~/.config/olympus/
 
 def installed_services():
     """SERVICES, minus apps that aren't installed on this PC (Mnemosyne is optional)."""
-    optional = {"mnemosyne": os.environ.get("MNEMOSYNE_DIR", "/opt/mnemosyne"), "clio": os.environ.get("CLIO_DIR", "/opt/clio")}
+    optional = {"mnemosyne": os.environ.get("MNEMOSYNE_DIR", "/opt/mnemosyne"), "clio": os.environ.get("CLIO_DIR", "/opt/clio"),
+                "athena": os.environ.get("ATHENA_DIR", "/opt/athena")}
     have = {k: os.path.exists(d + "/docker-compose.yml") for k, d in optional.items()}
     have["aegis"] = os.path.exists(AEGIS_CONF)
     return {k: u for k, u in SERVICES.items() if have.get(k, True)}
@@ -81,7 +83,7 @@ def ts_host():
 
 BACKUP_STATUS = os.environ.get("BACKUP_STATUS", "/var/lib/homelab-backup/status.json")
 NTFY_TOKEN = os.environ.get("NTFY_TOKEN", "")
-NICE = {"odysseus": "Odysseus", "apollo": "Apollo", "theia": "Theia", "cerberus": "Cerberus (passwords)", "budget": "Plutus budget", "investments": "Plutus investments", "navidrome": "Navidrome (music library)", "jellyfin": "Jellyfin (film library)", "mnemosyne": "Mnemosyne (photos)", "clio": "Clio (books)", "aegis": "Aegis (ad blocking)"}
+NICE = {"odysseus": "Odysseus", "apollo": "Apollo", "theia": "Theia", "cerberus": "Cerberus (passwords)", "budget": "Plutus budget", "investments": "Plutus investments", "navidrome": "Navidrome (music library)", "jellyfin": "Jellyfin (film library)", "mnemosyne": "Mnemosyne (photos)", "clio": "Clio (books)", "aegis": "Aegis (ad blocking)", "athena": "Athena (documents)"}
 HOP_BY_HOP = {"connection", "keep-alive", "proxy-authenticate", "proxy-authorization",
               "te", "trailers", "transfer-encoding", "upgrade", "host"}
 
@@ -163,7 +165,7 @@ def folder_sizes_loop():
 def compute_sizes():
     sizes = {}
     purge_cleared()
-    for sub in ("music", "movies", "shows", "photos", "books", "inbox", ".cleared"):
+    for sub in ("music", "movies", "shows", "photos", "books", "documents", "inbox", ".cleared"):
         total = 0
         for root, _, files in os.walk(os.path.join(MEDIA, sub)):
             for f in files:
@@ -304,7 +306,7 @@ def watcher():
             fails[k] = 0 if up else fails[k] + 1
             if fails[k] == 2 and k not in down:          # two misses in a row = really down
                 down.add(k)
-                notify(f"{NICE[k]} is down", f"{NICE[k]} stopped answering. Try: sudo systemctl restart {k}" if k not in ("odysseus", "cerberus", "budget", "investments", "mnemosyne", "clio", "aegis") else f"{NICE[k]} stopped answering. Try: docker ps", "warning", "high")
+                notify(f"{NICE[k]} is down", f"{NICE[k]} stopped answering. Try: sudo systemctl restart {k}" if k not in ("odysseus", "cerberus", "budget", "investments", "mnemosyne", "clio", "aegis", "athena") else f"{NICE[k]} stopped answering. Try: docker ps", "warning", "high")
             elif up and k in down:
                 down.discard(k)
                 notify(f"{NICE[k]} is back", f"{NICE[k]} is running again.", "white_check_mark")
@@ -329,7 +331,7 @@ TIDY_SCRIPTS = [
 DROP_TYPES = {".mkv", ".mp4", ".m4v", ".avi", ".mov", ".webm", ".wmv", ".ts", ".mpg", ".mpeg", ".flv",
               ".mp3", ".flac", ".m4a", ".aac", ".ogg", ".oga", ".opus", ".wav", ".wma", ".aiff", ".aif", ".ape", ".wv",
               ".srt", ".ass", ".ssa", ".vtt", ".sub", ".idx", ".jpg", ".jpeg", ".png", ".webp",
-              ".m4b", ".epub", ".pdf", ".mobi", ".azw3", ".azw", ".cbz", ".cbr", ".fb2"}
+              ".m4b", ".epub", ".pdf", ".mobi", ".azw3", ".azw", ".cbz", ".cbr", ".fb2", ".tif", ".tiff", ".gif"}
 _admins = {}   # (u, t, s) -> time it was checked
 
 
@@ -554,6 +556,7 @@ ADDRESS_APPS = [  # key, name, what it is, local URL
     ("cerberus", "Cerberus", "Passwords", os.environ.get("CERBERUS_URL", "http://127.0.0.1:8222")),
     ("mnemosyne", "Mnemosyne", "Photos", os.environ.get("MNEMOSYNE_URL", "http://127.0.0.1:2283")),
     ("clio", "Clio", "Books & podcasts", os.environ.get("CLIO_URL", "http://127.0.0.1:13378")),
+    ("athena", "Athena", "Documents", os.environ.get("ATHENA_URL", "http://127.0.0.1:8010")),
     ("aegis", "Aegis", "Ad blocking (admin page)", os.environ.get("AEGIS_URL", "http://127.0.0.1:3080")),
     ("budget", "Plutus budget", "Budget", os.environ.get("BUDGET_URL", "http://127.0.0.1:5006")),
     ("investments", "Plutus investments", "Investments", os.environ.get("INVESTMENTS_URL", "http://127.0.0.1:3333")),
@@ -561,7 +564,7 @@ ADDRESS_APPS = [  # key, name, what it is, local URL
     ("jellyfin", "Jellyfin", "Film library admin (this PC)", BACKENDS["/jf/"]),
     ("ntfy", "ntfy", "Phone alerts server", NTFY_URL),
 ]
-TS_DEFAULTS = {"aegis": 4553, "clio": 4443, "mnemosyne": 6443, "olympus": 9443, "apollo": 443, "theia": 8443, "odysseus": 10000, "cerberus": int(CERBERUS_TS_PORT),
+TS_DEFAULTS = {"athena": 8843, "aegis": 4553, "clio": 4443, "mnemosyne": 6443, "olympus": 9443, "apollo": 443, "theia": 8443, "odysseus": 10000, "cerberus": int(CERBERUS_TS_PORT),
                "budget": 5443, "investments": 3443}
 _addr = {"at": 0, "v": None}
 
@@ -597,7 +600,7 @@ def addresses():
     host, served = ts_host(), served_ports()
     rows = []
     for key, name, what, url in ADDRESS_APPS:
-        if key in ("mnemosyne", "clio", "aegis") and key not in installed_services():
+        if key in ("mnemosyne", "clio", "aegis", "athena") and key not in installed_services():
             continue
         local_port = _port(url)
         ts_port = served.get(local_port) if served is not None else TS_DEFAULTS.get(key)

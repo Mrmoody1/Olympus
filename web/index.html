@@ -225,6 +225,9 @@ button.fo{width:100%;text-align:left;font:inherit;color:var(--text)}
 .tnav{display:flex;justify-content:space-between;gap:10px}
 .tnav button{height:42px;padding:0 20px;border-radius:999px}
 .tnav .ghost{border:1px solid var(--line);color:var(--soft)}
+.dmode{display:flex;gap:4px;align-self:flex-start;padding:3px;border-radius:999px;background:var(--raised);border:1px solid var(--line-soft)}
+.dmode button{height:24px;padding:0 12px;border-radius:999px;font-size:11px;color:var(--soft)}
+.dmode button[aria-pressed="true"]{background:var(--accent);color:var(--accent-ink);font-weight:600}
 #disk{cursor:pointer}
 #disk:hover .l span:first-child{color:var(--text)}
 .app-tile{position:relative;display:flex;flex-direction:column;gap:14px;padding:20px;border-radius:18px;background:var(--panel);border:1px solid var(--line);min-height:190px;overflow:hidden;transition:border-color .15s,transform .15s}
@@ -432,6 +435,7 @@ footer button{color:var(--muted);text-decoration:underline}
 
     <div class="droprow">
       <div class="dropcol">
+        <div class="dmode hidden" id="dropMode" role="group" aria-label="What are you adding?"><button type="button" data-m="media" aria-pressed="true">Media</button><button type="button" data-m="docs" aria-pressed="false">Documents</button></div>
         <div class="drop" id="drop" role="button" tabindex="0" aria-describedby="dropHint">
           <span class="ic" data-icon="upload"></span>
           <span class="tx"><b id="dropTitle">Drop films, music or books here</b><small id="dropHint">or click to choose · filed for you</small></span>
@@ -456,6 +460,7 @@ footer button{color:var(--muted);text-decoration:underline}
       </div>
       <a class="ex" id="t-cerberus" target="_blank" rel="noopener"><span class="dot"></span><span class="ic" data-icon="shield"></span><span class="nm">Cerberus</span><span class="tip">Cerberus<small class="st">Passwords · checking…</small></span></a>
       <a class="ex" id="t-mnemosyne" target="_blank" rel="noopener"><span class="dot"></span><span class="ic" data-icon="photo"></span><span class="nm">Mnemosyne</span><span class="tip">Mnemosyne<small class="st">Photos · checking…</small></span></a>
+      <a class="ex" id="t-athena" target="_blank" rel="noopener"><span class="dot"></span><span class="ic" data-icon="doc"></span><span class="nm">Athena</span><span class="tip">Athena<small class="st">Documents · checking…</small></span></a>
       <a class="ex" id="t-aegis" target="_blank" rel="noopener"><span class="dot"></span><span class="ic" data-icon="aegis"></span><span class="nm">Aegis</span><span class="tip">Aegis<small class="st">Ad blocking · checking…</small></span></a>
       <a class="ex" id="t-clio" target="_blank" rel="noopener"><span class="dot"></span><span class="ic" data-icon="book"></span><span class="nm">Clio</span><span class="tip">Clio<small class="st">Books · checking…</small></span></a>
       <button class="ex settings" id="x-settings" type="button"><span class="ic" data-icon="gear"></span><span class="nm">Settings</span></button>
@@ -606,6 +611,7 @@ const ICONS = {
   play: P('<path d="M7 4l13 8-13 8z"/>'),
   dl: P('<path d="M12 4v11M7 10l5 5 5-5M5 20h14"/>'),
   gear: P('<circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.7 1.7 0 0 0 .3 1.8l.1.1a2 2 0 1 1-2.8 2.8l-.1-.1a1.7 1.7 0 0 0-1.8-.3 1.7 1.7 0 0 0-1 1.5V21a2 2 0 1 1-4 0v-.1a1.7 1.7 0 0 0-1.1-1.5 1.7 1.7 0 0 0-1.8.3l-.1.1a2 2 0 1 1-2.8-2.8l.1-.1a1.7 1.7 0 0 0 .3-1.8 1.7 1.7 0 0 0-1.5-1H3a2 2 0 1 1 0-4h.1a1.7 1.7 0 0 0 1.5-1.1 1.7 1.7 0 0 0-.3-1.8l-.1-.1a2 2 0 1 1 2.8-2.8l.1.1a1.7 1.7 0 0 0 1.8.3H9a1.7 1.7 0 0 0 1-1.5V3a2 2 0 1 1 4 0v.1a1.7 1.7 0 0 0 1 1.5 1.7 1.7 0 0 0 1.8-.3l.1-.1a2 2 0 1 1 2.8 2.8l-.1.1a1.7 1.7 0 0 0-.3 1.8V9a1.7 1.7 0 0 0 1.5 1H21a2 2 0 1 1 0 4h-.1a1.7 1.7 0 0 0-1.5 1z"/>'),
+  doc: P('<path d="M7 3h7l5 5v13H7z"/><path d="M14 3v5h5M10 13h6M10 17h6"/>'),
   aegis: P('<circle cx="12" cy="12" r="9"/><circle cx="12" cy="12" r="5"/><path d="M12 3v4M12 17v4M3 12h4M17 12h4"/>'),
   book: P('<path d="M4 5a2 2 0 0 1 2-2h13v16H6a2 2 0 0 0-2 2z"/><path d="M4 21V5M19 19v2H6"/><path d="M9 7h6"/>'),
   grid: P('<rect x="3" y="3" width="7" height="7" rx="1.5"/><rect x="14" y="3" width="7" height="7" rx="1.5"/><rect x="3" y="14" width="7" height="7" rx="1.5"/><rect x="14" y="14" width="7" height="7" rx="1.5"/>'),
@@ -655,6 +661,7 @@ const APPS = {
   mnemosyne: viaTailscale ? `https://${host}:6443` : `http://${host}:2283`,
   clio: viaTailscale ? `https://${host}:4443` : `http://${host}:13378`,
   aegis: viaTailscale ? `https://${host}:4553` : `http://${host}:3080`,
+  athena: viaTailscale ? `https://${host}:8843` : `http://${host}:8010`,
 };
 $('#where').textContent = viaTailscale ? 'via Tailscale' : 'on this PC';
 for (const k of Object.keys(APPS)) $('#t-' + k).href = APPS[k] + '/';
@@ -776,7 +783,7 @@ function tickClock(){
 }
 
 /* ---------- status ---------- */
-const SVC_NAMES = { odysseus: 'Odysseus', apollo: 'Apollo', theia: 'Theia', cerberus: 'Cerberus', budget: 'Plutus · budget', investments: 'Plutus · investments', mnemosyne: 'Mnemosyne · photos', clio: 'Clio · books', aegis: 'Aegis · ad blocking', navidrome: 'Navidrome · music library', jellyfin: 'Jellyfin · film library' };
+const SVC_NAMES = { odysseus: 'Odysseus', apollo: 'Apollo', theia: 'Theia', cerberus: 'Cerberus', budget: 'Plutus · budget', investments: 'Plutus · investments', mnemosyne: 'Mnemosyne · photos', clio: 'Clio · books', athena: 'Athena · documents', aegis: 'Aegis · ad blocking', navidrome: 'Navidrome · music library', jellyfin: 'Jellyfin · film library' };
 async function loadStatus(){
   let s;
   try { s = await (await fetch('/api/status')).json(); } catch { return; }
@@ -786,7 +793,8 @@ async function loadStatus(){
     $('#t-budget .dot').className = 'dot ' + (b ? 'up' : 'down');
     $('#t-investments .dot').className = 'dot ' + (i ? 'up' : 'down');
   }
-  for (const [k, what] of [['cerberus', 'Passwords'], ['mnemosyne', 'Photos'], ['clio', 'Books'], ['aegis', 'Ad blocking']]) {
+  if (window.olympusDropModes) window.olympusDropModes(!!s.athena);
+  for (const [k, what] of [['cerberus', 'Passwords'], ['mnemosyne', 'Photos'], ['clio', 'Books'], ['athena', 'Documents'], ['aegis', 'Ad blocking']]) {
     const t = $('#t-' + k); const up = s[k] && s[k].up;
     if (k !== 'cerberus' && !s[k]) { t.classList.add('hidden'); continue; }   // not installed (yet)
     t.classList.remove('hidden');
@@ -799,7 +807,7 @@ async function loadStatus(){
     t.querySelector('.dot').className = 'dot ' + (up ? 'up' : 'down');
     t.querySelector('.st').textContent = up ? 'Running' : (s[k] && s[k].up ? `${k === 'apollo' ? 'Navidrome' : 'Jellyfin'} is down` : 'Not running');
   }
-  $('#svc').innerHTML = Object.entries(SVC_NAMES).filter(([k]) => !['mnemosyne', 'clio', 'aegis'].includes(k) || s[k]).map(([k, n]) => `<div><span class="dot ${s[k] && s[k].up ? 'up' : 'down'}"></span><span class="n">${esc(n)}</span><span class="ms">${s[k] && s[k].up ? s[k].ms + ' ms' : 'down'}</span></div>`).join('');
+  $('#svc').innerHTML = Object.entries(SVC_NAMES).filter(([k]) => !['mnemosyne', 'clio', 'aegis', 'athena'].includes(k) || s[k]).map(([k, n]) => `<div><span class="dot ${s[k] && s[k].up ? 'up' : 'down'}"></span><span class="n">${esc(n)}</span><span class="ms">${s[k] && s[k].up ? s[k].ms + ' ms' : 'down'}</span></div>`).join('');
 }
 
 /* ---------- the PC ---------- */
@@ -844,7 +852,7 @@ async function loadSystem(){
   let s;
   try { s = await (await fetch('/api/system')).json(); } catch { return; }
   const d = s.disk; const f = s.folders || {};
-  const parts = [['Music', f.music, '#e0805f'], ['Films', f.movies, '#8fa8e0'], ['Shows', f.shows, '#7fb98a'], ['Photos', f.photos, '#d98fb0'], ['Books', f.books, '#c9a77f']].filter(p => p[1]);
+  const parts = [['Music', f.music, '#e0805f'], ['Films', f.movies, '#8fa8e0'], ['Shows', f.shows, '#7fb98a'], ['Photos', f.photos, '#d98fb0'], ['Books', f.books, '#c9a77f'], ['Documents', f.documents, '#9fb4c7']].filter(p => p[1]);
   const media = parts.reduce((t, p) => t + p[1], 0);
   const other = Math.max(0, d.used - media);
   $('#disk').innerHTML = `<div class="l"><span>Storage <span style="color:var(--muted)">${esc(d.path)}</span></span><b>${fmtBytes(d.free)} free</b></div>
@@ -989,7 +997,7 @@ function storRow(title, meta, buttons){
 async function paintStorageDisk(){
   let s; try { s = await (await fetch('/api/system')).json(); } catch { return; }
   const d = s.disk, f = s.folders || {};
-  const parts = [['Music', f.music, '#e0805f'], ['Films', f.movies, '#8fa8e0'], ['Shows', f.shows, '#7fb98a'], ['Photos', f.photos, '#d98fb0'], ['Books', f.books, '#c9a77f'], ['Inbox', f.inbox, '#d9b35b'], ['Recently cleared', f['.cleared'], '#a47fc9']].filter(p => p[1]);
+  const parts = [['Music', f.music, '#e0805f'], ['Films', f.movies, '#8fa8e0'], ['Shows', f.shows, '#7fb98a'], ['Photos', f.photos, '#d98fb0'], ['Books', f.books, '#c9a77f'], ['Documents', f.documents, '#9fb4c7'], ['Inbox', f.inbox, '#d9b35b'], ['Recently cleared', f['.cleared'], '#a47fc9']].filter(p => p[1]);
   const other = Math.max(0, d.used - parts.reduce((t, p) => t + p[1], 0));
   $('#storSub').textContent = `${fmtBytes(d.free)} free of ${fmtBytes(d.total)}`;
   $('#storDisk').innerHTML = `<div class="diskbar">${parts.map(p => `<span style="width:${p[1] / d.total * 100}%;background:${p[2]}"></span>`).join('')}<span style="width:${other / d.total * 100}%;background:#5a5754"></span></div>
@@ -1174,6 +1182,7 @@ const PHONE_HOW = {
   mnemosyne: 'Use the Immich app, with this as the server address',
   clio: 'Use the Audiobookshelf app, with this as the server address',
   aegis: 'Its admin page. Blocking itself starts once Tailscale DNS points to Aegis',
+  athena: 'Open it, then ⋮ → Add to Home screen. Upload photos of letters from there',
 };
 let setData = null;
 function qrSvg(text){
@@ -1456,8 +1465,18 @@ function paintChips(){
   const box = $('#drop'), pick = $('#dropPick'), bar = $('#dropBar'), res = $('#dropRes');
   const title = $('#dropTitle'), hint = $('#dropHint');
   const TYPES = /\.(mkv|mp4|m4v|avi|mov|webm|wmv|ts|mpe?g|flv|mp3|flac|m4a|m4b|aac|ogg|oga|opus|wav|wma|aiff?|ape|wv|srt|ass|ssa|vtt|sub|idx|jpe?g|png|webp|epub|pdf|mobi|azw3?|cbz|cbr|fb2)$/i;
+  const DOC_TYPES = /\.(pdf|jpe?g|png|webp|tiff?|gif)$/i;
+  let mode = 'media';
+  const setMode = (m) => {
+    mode = m;
+    document.querySelectorAll('#dropMode button').forEach(b => b.setAttribute('aria-pressed', String(b.dataset.m === m)));
+    title.textContent = m === 'docs' ? 'Drop letters, bills or scans here' : 'Drop films, music or books here';
+    hint.textContent = m === 'docs' ? 'or click to choose · Athena reads them' : 'or click to choose · filed for you';
+  };
+  document.querySelectorAll('#dropMode button').forEach(b => b.addEventListener('click', () => setMode(b.dataset.m)));
+  window.olympusDropModes = (athena) => { $('#dropMode').classList.toggle('hidden', !athena); if (!athena && mode === 'docs') setMode('media'); };
   let busy = false;
-  const reset = () => { title.textContent = 'Drop films, music or books here'; hint.textContent = 'or click to choose · filed for you'; bar.style.width = '0'; box.classList.remove('busy'); busy = false; };
+  const reset = () => { setMode(mode); bar.style.width = '0'; box.classList.remove('busy'); busy = false; };
   // 'movies/Alien (1979)/Alien (1979).mkv' -> 'Film · Alien (1979)'; music paths -> 'Music · Artist · Album · Song'
   const nice = (path) => {
     const p = path.split('/'), stem = (f) => f.replace(/\.[^.]+$/, '');
@@ -1481,7 +1500,7 @@ function paintChips(){
   function put(item, onProgress){
     return new Promise((resolve) => {
       const x = new XMLHttpRequest();
-      x.open('PUT', '/api/inbox/upload?path=' + encodeURIComponent(item.path));
+      x.open('PUT', '/api/inbox/upload?path=' + encodeURIComponent((mode === 'docs' ? 'documents/' : '') + item.path));
       for (const [k, v] of Object.entries(auth())) x.setRequestHeader(k, v);
       x.upload.onprogress = (e) => onProgress(e.loaded);
       x.onload = () => resolve({ ok: x.status === 200, status: x.status, msg: (x.responseText.match(/<p>Message: ([^<]+)/) || [])[1] || x.statusText });
@@ -1492,8 +1511,9 @@ function paintChips(){
   async function go(items){
     if (busy) return;
     if (!nav) { show([['left', 'Sign in to Olympus first.']]); return; }
-    const skipped = items.filter(i => !TYPES.test(i.file.name));
-    items = items.filter(i => TYPES.test(i.file.name));
+    const OK = mode === 'docs' ? DOC_TYPES : TYPES;
+    const skipped = items.filter(i => !OK.test(i.file.name));
+    items = items.filter(i => OK.test(i.file.name));
     if (!items.length) { show([['left', skipped.length ? "Those aren't films, music or books." : 'Nothing to add.']]); return; }
     busy = true; box.classList.add('busy'); res.classList.add('hidden');
     const total = items.reduce((n, i) => n + i.file.size, 0) || 1;
@@ -1509,6 +1529,12 @@ function paintChips(){
         rows.push(['left', `✗ ${item.file.name}: ${r.status === 401 ? 'only the Navidrome admin account can add files' : r.msg}`]);
         if (r.status === 401 || r.status === 403 || r.status === 507) break;
       }
+    }
+    if (mode === 'docs') {                       // Athena takes it from here (it reads each page first)
+      const sent = items.length - rows.length;
+      if (sent > 0) rows.unshift(['ok', `✓ ${sent} document${sent === 1 ? '' : 's'} sent to Athena. It reads each page, then they're searchable in a minute or two.`]);
+      if (skipped.length) rows.push(['left', `· Skipped ${skipped.length} file${skipped.length === 1 ? '' : 's'}: Athena takes PDFs, photos and scans`]);
+      show(rows); reset(); return;
     }
     title.textContent = 'Filing…'; hint.textContent = 'naming them and putting them in the right place'; bar.style.width = '100%';
     try {
