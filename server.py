@@ -699,6 +699,41 @@ def aegis_summary(fresh=False):
     return v
 
 
+# ---------- getting started: what's been set up so far (for the welcome tour) ----------
+SETUP_FILE = os.path.expanduser("~/.config/olympus/setup.json")
+
+
+def setup_seen(key):
+    try:
+        with open(SETUP_FILE) as f:
+            d = json.load(f)
+    except (OSError, ValueError):
+        d = {}
+    if not d.get(key):
+        d[key] = time.time()
+        os.makedirs(os.path.dirname(SETUP_FILE), exist_ok=True)
+        with open(SETUP_FILE, "w") as f:
+            json.dump(d, f)
+
+
+def setup_status():
+    try:
+        with open(SETUP_FILE) as f:
+            seen = json.load(f)
+    except (OSError, ValueError):
+        seen = {}
+    try:
+        with open(BACKUP_STATUS) as f:
+            b = json.load(f)
+        backups = bool(b.get("ok"))
+    except (OSError, ValueError):
+        backups = False
+    logs = [os.path.expanduser(x) for x in ("~/.theia-tidy.log", "~/.apollo-tidy.log", "~/.clio-tidy.log")]
+    inbox = any(os.path.exists(x) and os.path.getsize(x) > 0 for x in logs)
+    return {"phone": bool(seen.get("phone")), "alerts": bool(_alerts.get("last") or seen.get("alerts")),
+            "backups": backups, "inbox": inbox}
+
+
 # ---------- web server ----------
 class Handler(http.server.SimpleHTTPRequestHandler):
     extensions_map = {**http.server.SimpleHTTPRequestHandler.extensions_map,
@@ -731,6 +766,12 @@ class Handler(http.server.SimpleHTTPRequestHandler):
         super().end_headers()
 
     def do_GET(self):
+        # Opened through Tailscale (a phone or another device): the "phone" step of getting started is done
+        if self.headers.get("Host", "").split(":")[0].endswith(".ts.net") and self.path in ("/", "/index.html"):
+            try: setup_seen("phone")
+            except OSError: pass
+        if self.path == "/api/setup":
+            return self._json(setup_status())
         if self.path == "/api/status":
             results = {}
             threads = [threading.Thread(target=lambda k=k, u=u: results.__setitem__(k, check(u))) for k, u in installed_services().items()]
@@ -844,6 +885,9 @@ class Handler(http.server.SimpleHTTPRequestHandler):
             return self._json({"ok": True, "lines": run_tidy()})
         if self.path == "/api/alerts/test":
             ok = notify("Test from Olympus", "Phone alerts are working.", "tada")
+            if ok:
+                try: setup_seen("alerts")
+                except OSError: pass
             return self._json({"ok": ok, "topic": NTFY_TOPIC})
         if self._backend():
             return self._proxy()

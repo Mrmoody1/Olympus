@@ -195,6 +195,36 @@ button.fo{width:100%;text-align:left;font:inherit;color:var(--text)}
 .bksum{padding:12px 14px;border-radius:12px;background:var(--raised);border:1px solid var(--line-soft);font-size:12px;line-height:1.6;color:var(--soft)}
 .bksum b{color:var(--text)}
 @media (max-width: 520px){ .stabs button{flex-direction:column;gap:2px;height:52px;font-size:11px} }
+.gs{display:flex;align-items:center;gap:14px;flex-wrap:wrap;padding:14px 18px;border-radius:16px;background:linear-gradient(135deg,rgba(224,128,95,.14),rgba(224,128,95,.04));border:1px solid rgba(224,128,95,.35)}
+.gs .hd{display:flex;flex-direction:column;gap:2px;min-width:150px}
+.gs .hd b{font-size:14px}
+.gs .hd small{font-size:11px;color:var(--soft)}
+.gs .steps{display:flex;gap:6px;flex-wrap:wrap;flex:1}
+.gs .steps span{display:inline-flex;align-items:center;gap:6px;height:28px;padding:0 10px;border-radius:999px;font-size:11px;border:1px solid var(--line);color:var(--soft)}
+.gs .steps span.done{border-color:transparent;background:rgba(127,185,138,.16);color:var(--text)}
+.gs .go{height:34px;padding:0 16px;border-radius:999px;background:var(--accent);color:var(--accent-ink);font-weight:600;font-size:12px}
+.gs .x{width:30px;height:30px;border-radius:50%;color:var(--muted);display:inline-flex;align-items:center;justify-content:center}
+.gs .x:hover{background:var(--hover);color:var(--text)}
+.sheet.tour{width:min(560px,100%);min-height:min(520px,calc(100vh - 32px))}
+.tdots{display:flex;gap:6px;margin-right:44px;margin-top:12px}
+.tdots i{flex:1;height:4px;border-radius:2px;background:var(--line)}
+.tdots i.on{background:var(--accent)}
+.tbody{flex:1;display:flex;flex-direction:column;gap:12px;font-size:14px;line-height:1.6;color:var(--soft)}
+.tbody h3{margin:0;font-size:20px;color:var(--text)}
+.tbody ol{margin:0;padding-left:20px;display:flex;flex-direction:column;gap:6px}
+.tbody b{color:var(--text)}
+.tbody code{color:var(--text);background:var(--raised);padding:1px 6px;border-radius:6px;font-size:13px}
+.tcheck{display:flex;align-items:center;gap:10px;padding:10px 14px;border-radius:12px;background:var(--raised);border:1px solid var(--line-soft);font-size:13px}
+.tcheck.done{border-color:rgba(127,185,138,.45);color:var(--text)}
+.tapps{display:grid;grid-template-columns:repeat(auto-fill,minmax(150px,1fr));gap:8px}
+.tapps div{padding:10px 12px;border-radius:12px;background:var(--raised);border:1px solid var(--line-soft);font-size:12px;display:flex;flex-direction:column}
+.tapps b{font-size:13px}
+.tqr{display:flex;gap:16px;align-items:center;flex-wrap:wrap}
+.tqr .qr{width:140px;height:140px;padding:8px;border-radius:12px;background:#fff;flex:none}
+.tqr .qr svg{width:100%;height:100%;display:block}
+.tnav{display:flex;justify-content:space-between;gap:10px}
+.tnav button{height:42px;padding:0 20px;border-radius:999px}
+.tnav .ghost{border:1px solid var(--line);color:var(--soft)}
 #disk{cursor:pointer}
 #disk:hover .l span:first-child{color:var(--text)}
 .app-tile{position:relative;display:flex;flex-direction:column;gap:14px;padding:20px;border-radius:18px;background:var(--panel);border:1px solid var(--line);min-height:190px;overflow:hidden;transition:border-color .15s,transform .15s}
@@ -433,6 +463,13 @@ footer button{color:var(--muted);text-decoration:underline}
 
     <section aria-label="Quick actions"><div class="chips" id="chips"></div></section>
 
+    <section class="gs hidden" id="gsCard" aria-label="Getting started">
+      <span class="hd"><b id="gsTitle">Getting started</b><small id="gsSub">A few steps to get the most out of Olympus</small></span>
+      <span class="steps" id="gsSteps"></span>
+      <button class="go" type="button" id="gsGo">Continue setup</button>
+      <button class="x" type="button" id="gsHide" aria-label="Hide getting started"><span data-icon="close"></span></button>
+    </section>
+
     <div class="cols">
       <div class="stack">
         <section><h3>Playing now <small id="npWhen"></small></h3><div class="np" id="nowPlaying"><div class="empty">Checking…</div></div></section>
@@ -523,6 +560,7 @@ footer button{color:var(--muted);text-decoration:underline}
 
     <div class="spane hidden" data-pane="account" role="tabpanel">
       <div class="srow"><span class="t"><b id="setWho">Signed in</b><small>Olympus remembers your music and films accounts on this device</small></span><button type="button" id="setOut">Sign out</button></div>
+      <div class="srow"><span class="t"><b>Welcome tour</b><small>Go through getting started again</small></span><button type="button" id="setTour">Start</button></div>
       <div class="srow"><span class="t"><b>This PC</b><small id="setPc">…</small></span></div>
       <div class="srow"><span class="t"><b>Olympus</b><small id="setVer">…</small></span></div>
     </div>
@@ -538,6 +576,15 @@ footer button{color:var(--muted);text-decoration:underline}
     <div class="crumbs" id="restCrumbs"></div>
     <div class="slist" id="restList"><div class="note">Loading…</div></div>
     <div id="restDone"></div>
+  </div>
+</div>
+
+<div class="scrim hidden" id="tourScrim">
+  <div class="sheet tour" id="tourSheet" role="dialog" aria-modal="true" aria-label="Welcome to Olympus">
+    <button class="x" type="button" id="tourClose" aria-label="Close"><span data-icon="close"></span></button>
+    <div class="tdots" id="tourDots"></div>
+    <div class="tbody" id="tourBody"></div>
+    <div class="tnav"><button type="button" class="ghost" id="tourBack">Back</button><button type="button" class="primary" id="tourNext">Next</button></div>
   </div>
 </div>
 
@@ -1294,6 +1341,91 @@ $('#restScrim').addEventListener('click', (e) => { if (e.target.id === 'restScri
 document.addEventListener('keydown', (e) => { if (e.key === 'Escape' && !$('#restScrim').classList.contains('hidden')) closeRestore(); });
 $('#setRestore').addEventListener('click', openRestore);
 
+/* ---------- welcome tour + getting started ---------- */
+const GS = [['phone', 'Apps on your phone'], ['alerts', 'Phone alerts'], ['backups', 'Backups'], ['inbox', 'Add something']];
+let tourStep = 0, setupNow = {};
+async function getSetup(){ try { setupNow = await (await fetch('/api/setup')).json(); } catch {} return setupNow; }
+async function paintGetStarted(){
+  await getSetup();
+  const done = GS.filter(([k]) => setupNow[k]).length;
+  let hidden = false; try { hidden = !!store.get('gsHidden'); } catch {}
+  $('#gsCard').classList.toggle('hidden', hidden || done === GS.length);
+  $('#gsTitle').textContent = `Getting started · ${done} of ${GS.length}`;
+  $('#gsSteps').innerHTML = GS.map(([k, label]) => `<span class="${setupNow[k] ? 'done' : ''}">${setupNow[k] ? '✓' : '○'} ${esc(label)}</span>`).join('');
+}
+const check = (ok, yes, no) => `<div class="tcheck ${ok ? 'done' : ''}"><span class="dot ${ok ? 'up' : 'warn'}"></span>${ok ? yes : no}</div>`;
+const STEPS = [
+  async () => {
+    let apps = []; try { apps = (await (await fetch('/api/addresses')).json()).apps.filter(a => !['navidrome', 'jellyfin', 'ntfy', 'olympus'].includes(a.key)); } catch {}
+    return `<h3>Welcome to Olympus${nav && nav.name ? ', ' + esc(nav.name) : ''}</h3>
+      <p>This is your home screen for everything running on this PC: your music, films, photos, books, passwords and money, on any of your devices, with nothing stored with anyone else.</p>
+      <div class="tapps">${apps.map(a => `<div><b>${esc(a.name)}</b>${esc(a.what)}</div>`).join('')}</div>
+      <p>A few quick steps get it all working on your phone too. It takes about five minutes.</p>`;
+  },
+  async () => {
+    let remote = ''; try { remote = ((await (await fetch('/api/addresses')).json()).apps.find(a => a.key === 'olympus') || {}).remote || ''; } catch {}
+    return `<h3>Olympus on your phone</h3>
+      <ol><li>Install <b>Tailscale</b> on your phone (Play Store) and sign in with the same account as this PC.</li>
+      <li>With Tailscale on, scan this with your phone's camera.</li>
+      <li>In Chrome: <b>⋮ → Add to Home screen → Install</b>.</li></ol>
+      ${remote ? `<div class="tqr"><div class="qr">${qrSvg(remote + '/')}</div><span>Or type:<br><code>${esc(remote)}</code><br><br>The other apps have codes too: <b>Settings › Phone</b>.</span></div>` : '<p>Tailscale isn’t answering on this PC yet. Check it’s signed in.</p>'}
+      ${check(setupNow.phone, 'Done: Olympus has been opened from another device.', 'Waiting for Olympus to be opened on your phone…')}`;
+  },
+  async () => {
+    let a = {}; try { a = await (await fetch('/api/alerts')).json(); } catch {}
+    let srv = ''; try { srv = ((await (await fetch('/api/addresses')).json()).apps.find(x => x.key === 'ntfy') || {}).remote || ''; } catch {}
+    return `<h3>Phone alerts</h3>
+      <p>Olympus tells your phone when something needs you: an app stops, a backup has a problem, or new films and music arrive.</p>
+      <ol><li>Install <b>ntfy</b> on your phone (Play Store).</li>
+      <li>Tap <b>+</b>${srv ? `, choose <b>Use another server</b> and enter <code>${esc(srv)}</code>` : ''}, then subscribe to <code>${esc(a.topic || 'olympus')}</code>.</li>
+      <li>Send yourself a test: <button type="button" class="mini" id="tourTest">Send a test</button></li></ol>
+      ${check(setupNow.alerts, 'Done: a test alert has been sent.', 'Waiting for a test alert…')}`;
+  },
+  async () => `<h3>Backups</h3>
+      <p>Everything is backed up every night at 3am, encrypted, to your backup drive and to Koofr. If anything goes wrong, your phone hears about it.</p>
+      <div class="bksum" id="tourBk">Checking…</div>
+      <p>Lost something? <b>Settings › Backups › Restore files</b> gets any file or folder back, from any night, without touching anything else.</p>
+      ${check(setupNow.backups, 'Done: your backups are working.', 'No successful backup yet. The first one runs tonight.')}`,
+  async () => `<h3>Add your music, films and books</h3>
+      <p>Drop files onto the <b>“Drop films, music or books here”</b> box under Theia, share them to Olympus from your phone, or put them in <code>/srv/media/inbox</code> on this PC.</p>
+      <p>Olympus works out what each one is, names it properly and files it in the right app. Songs without details are recognised by how they sound.</p>
+      ${check(setupNow.inbox, 'Done: you’ve added something.', 'Try it now with any film, song or book.')}`,
+  async () => `<h3>You’re all set</h3>
+      <p>Everything you need is on this screen. A few things worth knowing:</p>
+      <ol><li><b>Settings</b> (the gear, bottom left): every app’s address, codes for your phone, backups and sign-out.</li>
+      <li><b>Your stats</b> and <b>Storage</b>: in the row of buttons.</li>
+      <li>The <b>Getting started</b> card stays on the home screen until every step is ticked.</li></ol>
+      <p>You can go through this again any time: <b>Settings › Account › Welcome tour</b>.</p>`,
+];
+async function paintTour(){
+  await getSetup();
+  $('#tourDots').innerHTML = STEPS.map((_, i) => `<i class="${i <= tourStep ? 'on' : ''}"></i>`).join('');
+  $('#tourBody').innerHTML = await STEPS[tourStep]();
+  $('#tourBack').style.visibility = tourStep ? 'visible' : 'hidden';
+  $('#tourNext').textContent = tourStep === STEPS.length - 1 ? 'Done' : tourStep === 0 ? 'Let’s go' : 'Next';
+  const t = $('#tourTest');
+  if (t) t.onclick = async () => {
+    t.disabled = true;
+    try { const r = await (await fetch('/api/alerts/test', { method: 'POST' })).json(); toast(r.ok ? 'Sent — check your phone' : "Couldn't reach ntfy"); } catch {}
+    t.disabled = false; paintTour();
+  };
+  if ($('#tourBk')) paintBackups().then(() => { const b = $('#setBk'); if (b && $('#tourBk')) $('#tourBk').innerHTML = b.innerHTML; });
+}
+let tourTimer;
+function openTour(step = 0){
+  tourStep = step; $('#tourScrim').classList.remove('hidden'); paintTour();
+  try { store.set('tourSeen', 1); } catch {}
+  clearInterval(tourTimer); tourTimer = setInterval(() => { if (tourStep >= 1 && tourStep <= 4) paintTour(); }, 8000);   // ticks itself off as you do each step
+}
+function closeTour(){ $('#tourScrim').classList.add('hidden'); clearInterval(tourTimer); paintGetStarted(); }
+$('#tourNext').addEventListener('click', () => { if (tourStep >= STEPS.length - 1) { try { store.set('tourDone', 1); } catch {} closeTour(); } else { tourStep++; paintTour(); } });
+$('#tourBack').addEventListener('click', () => { if (tourStep) { tourStep--; paintTour(); } });
+$('#tourClose').addEventListener('click', closeTour);
+document.addEventListener('keydown', (e) => { if (e.key === 'Escape' && !$('#tourScrim').classList.contains('hidden')) closeTour(); });
+$('#gsGo').addEventListener('click', async () => { await getSetup(); const i = GS.findIndex(([k]) => !setupNow[k]); openTour(i < 0 ? 5 : i + 1); });
+$('#gsHide').addEventListener('click', () => { try { store.set('gsHidden', 1); } catch {} $('#gsCard').classList.add('hidden'); toast('Hidden. Start it again from Settings › Account.'); });
+$('#setTour').addEventListener('click', () => { try { store.del('gsHidden'); } catch {} closeAddresses(); openTour(0); });
+
 /* ---------- quick actions ---------- */
 function paintChips(){
   const r = resumeItems[0];
@@ -1463,6 +1595,9 @@ function start(){
   $('#login').classList.add('hidden'); $('#app').classList.remove('hidden');
   tickClock(); loadStatus(); loadSystem(); loadLive(); loadFresh(); paintChips(); loadAlerts(); loadBackup(); loadBalances(); loadAegis();
   setTimeout(() => { if (nav) snapshotIfNeeded().catch(() => {}); }, 8000);
+  paintGetStarted();
+  let seen = false; try { seen = !!store.get('tourSeen'); } catch {}
+  if (!seen) setTimeout(() => openTour(0), 900);
   timers.forEach(clearInterval);
   timers = [
     setInterval(tickClock, 15000),
